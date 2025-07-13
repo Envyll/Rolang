@@ -1,11 +1,11 @@
 extern crate core;
 
-use std::rc::Rc;
 use imstr::string::ImString;
+use std::rc::Rc;
 
 pub mod lexer;
+mod normalizer;
 pub mod parser;
 
 type ImStrData = Rc<String>;
 type ImStr = ImString<ImStrData>;
-

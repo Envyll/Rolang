@@ -1,0 +1,220 @@
+use crate::lexer::{Token, TokenIterator, TokenType};
+use std::mem;
+
+#[derive(Debug, Clone)]
+pub struct NormalizedTokenIterator {
+    iter: TokenIterator,
+    curr: Option<Token>,
+    next: Option<Token>,
+    stack: Vec<usize>,
+    good_for_semicolon: bool,
+    good_for_indent: bool,
+}
+
+impl NormalizedTokenIterator {
+    pub fn new(mut iter: TokenIterator) -> Self {
+        Self {
+            curr: iter.next(),
+            next: iter.next(),
+            iter,
+            stack: vec![],
+            good_for_semicolon: false,
+            good_for_indent: true,
+        }
+    }
+}
+
+impl TokenIterator {
+    pub fn normalize(self) -> NormalizedTokenIterator {
+        NormalizedTokenIterator::new(self)
+    }
+}
+
+impl Iterator for NormalizedTokenIterator {
+    type Item = Token;
+    fn next(&mut self) -> Option<Self::Item> {
+        'all: loop {
+            let peak = *self.stack.last().unwrap_or(&0);
+            break 'all match &self.curr {
+                Some(Token {
+                    ty: TokenType::Indent(len),
+                    slice,
+                    row,
+                    ..
+                }) if *len < peak && is_prev_good_for_indent_or_dedent(&self.next) => {
+                    self.good_for_semicolon = true;
+                    self.good_for_indent = false;
+                    let row = *row;
+                    let slice = slice.clone();
+                    self.stack.pop();
+                    Some(Token {
+                        slice,
+                        row,
+                        col: 0,
+                        num: 0,
+                        ty: TokenType::Close,
+                    })
+                }
+                Some(Token {
+                    ty: TokenType::Indent(len),
+                    slice,
+                    row,
+                    ..
+                }) if self.good_for_indent
+                    && *len > peak
+                    && is_prev_good_for_indent_or_dedent(&self.next) =>
+                {
+                    self.good_for_semicolon = false;
+                    self.good_for_indent = false;
+                    let row = *row;
+                    let slice = slice.clone();
+                    self.stack.push(*len);
+                    self.curr = mem::replace(&mut self.next, self.iter.next());
+                    Some(Token {
+                        slice,
+                        row,
+                        col: 0,
+                        num: 0,
+                        ty: TokenType::Open,
+                    })
+                }
+                Some(Token {
+                    ty: TokenType::Indent(len),
+                    slice,
+                    row,
+                    ..
+                }) if self.good_for_semicolon
+                    && *len == peak
+                    && is_prev_good_for_semicolon(&self.next) =>
+                {
+                    self.good_for_semicolon = false;
+                    self.good_for_indent = false;
+                    let row = *row;
+                    let slice = slice.clone();
+                    self.curr = mem::replace(&mut self.next, self.iter.next());
+                    Some(Token {
+                        slice,
+                        row,
+                        col: 0,
+                        num: 0,
+                        ty: TokenType::Semicolon,
+                    })
+                }
+                Some(Token {
+                    ty: TokenType::Indent(_),
+                    ..
+                }) => {
+                    self.curr = mem::replace(&mut self.next, self.iter.next());
+                    continue 'all;
+                }
+                Some(t) => {
+                    self.good_for_indent = is_next_good_for_indent(t);
+                    self.good_for_semicolon = is_next_good_for_semicolon(t);
+                    mem::replace(
+                        &mut self.curr,
+                        mem::replace(&mut self.next, self.iter.next()),
+                    )
+                }
+                None if self.good_for_semicolon => {
+                    self.good_for_semicolon = false;
+                    Some(Token {
+                        slice: Default::default(),
+                        row: self.iter.lines().len(),
+                        col: 0,
+                        num: 0,
+                        ty: TokenType::Semicolon,
+                    })
+                }
+                None if !self.stack.is_empty() => {
+                    self.stack.pop();
+                    Some(Token {
+                        slice: Default::default(),
+                        row: self.iter.lines().len(),
+                        col: 0,
+                        num: 0,
+                        ty: TokenType::Close,
+                    })
+                }
+                None => None,
+            };
+        }
+    }
+}
+
+fn is_prev_good_for_indent_or_dedent(tok: &Option<Token>) -> bool {
+    match tok {
+        Some(Token {
+            ty: TokenType::Indent(_),
+            ..
+        }) => false,
+        _ => true,
+    }
+}
+
+fn is_next_good_for_semicolon(Token { ty, slice, .. }: &Token) -> bool {
+    match ty {
+        TokenType::Close
+        | TokenType::Symbol(_)
+        | TokenType::Argument(_)
+        | TokenType::Number { .. }
+        | TokenType::String { .. }
+        | TokenType::Character { .. }
+        | TokenType::Keyword { .. }
+        | TokenType::Colon
+        | TokenType::ColonEq
+        | TokenType::ColonColonEq => true,
+        TokenType::Operator => match slice.as_str() {
+            // mb add some extra conditions?
+            _ => true,
+        },
+        _ => false,
+    }
+}
+
+fn is_prev_good_for_semicolon(tok: &Option<Token>) -> bool {
+    let Some(Token { ty, slice, .. }) = tok else {
+        return false;
+    };
+    match ty {
+        TokenType::Semicolon
+        | TokenType::Comma
+        | TokenType::Close
+        | TokenType::Indent(_)
+        | TokenType::Colon
+        | TokenType::ColonColon
+        | TokenType::ColonEq
+        | TokenType::ColonColonEq => false,
+        TokenType::Operator => !is_exch(&slice),
+        TokenType::Keyword(slice) => !is_flow(&slice),
+        _ => true,
+    }
+}
+
+fn is_next_good_for_indent(Token { ty, slice, .. }: &Token) -> bool {
+    match ty {
+        TokenType::Open
+        | TokenType::Colon
+        | TokenType::ColonColon
+        | TokenType::ColonEq
+        | TokenType::ColonColonEq => true,
+        TokenType::Operator => is_exch(&slice),
+        TokenType::Keyword(slice) => is_flow(&slice),
+        _ => false,
+    }
+}
+
+#[inline]
+fn is_flow(str: &str) -> bool {
+    matches!(str, |"then"| "else"
+        | "or"
+        | "and"
+        | "match"
+        | "for"
+        | "while"
+        | "when")
+}
+
+#[inline]
+fn is_exch(str: &str) -> bool {
+    str.ends_with("<-")
+}

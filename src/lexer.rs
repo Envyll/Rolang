@@ -1,18 +1,18 @@
 use self::lex::*;
-use std::iter::Enumerate;
 use crate::{ImStr, ImStrData};
-use std::ops::Range;
 use bitflags::bitflags;
+use std::iter::Enumerate;
+use std::ops::Range;
 
 mod lex;
-mod lex_number;
-mod lex_symbol;
-mod lex_string;
 mod lex_char;
+mod lex_number;
 mod lex_operator;
+mod lex_string;
+mod lex_symbol;
 
 #[derive(Debug, Clone)]
-pub struct Token{ 
+pub struct Token {
     /// Token string representation
     pub slice: ImStr,
     /// Source code line number (from 0 to n)
@@ -24,23 +24,48 @@ pub struct Token{
     pub ty: TokenType,
 }
 
-
-#[derive(Debug, Clone)]
-pub enum TokenType{
-    Open, Close, Operator, Comma, Semicolon, Sharp,
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum TokenType {
+    Open,
+    Close,
+    Operator,
+    Comma,
+    Semicolon,
+    Sharp,
+    Colon,
+    ColonEq,
+    ColonColon,
+    ColonColonEq,
+    Ellipsis,
     Symbol(ImStr),
     Keyword(ImStr),
     Argument(ImStr),
-    Character{value: char, prefix_len: usize, suffix_len: usize, errors: CharErrorFlags},
-    String{value: StringValue, quote_count: usize, prefix_len: usize, suffix_len: usize, errors: StringErrorFlags},
-    Number{start_pos: usize, dot_pos: Option<usize>, exp_pos: Option<usize>, suf_pos: Option<usize>, errors: NumberErrorFlags},
-    Indent,
-    Other,
+    Character {
+        value: char,
+        prefix_len: usize,
+        suffix_len: usize,
+        errors: CharErrorFlags,
+    },
+    String {
+        value: StringValue,
+        quote_count: usize,
+        prefix_len: usize,
+        suffix_len: usize,
+        errors: StringErrorFlags,
+    },
+    Number {
+        start_pos: usize,
+        dot_pos: Option<usize>,
+        exp_pos: Option<usize>,
+        suf_pos: Option<usize>,
+        errors: NumberErrorFlags,
+    },
+    Indent(usize),
     Error,
 }
 
 #[derive(Debug, Clone)]
-pub struct TokenIterator{
+pub struct TokenIterator {
     lines: Vec<ImStr>,
     row: usize,
     iter: Enumerate<imstr::string::CharIndices<ImStrData>>,
@@ -54,46 +79,43 @@ struct State {
     char: char,
 }
 
-
-#[derive(Debug, Clone, Default)]
-pub enum StringValue
-{
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub enum StringValue {
     #[default]
     Empty,
     SingleLine(ImStr),
-    MultiLine{lines: Range<usize>, last_line_slice: ImStr},
+    MultiLine {
+        lines: Range<usize>,
+        last_line_slice: ImStr,
+    },
 }
 
 pub fn is_keyword(str: &str) -> bool {
-    matches!(str,
-        |"_"
-        |"and"
-        |"as"
-        |"by"
-        |"class"
-        |"const"
-        |"else"
-        |"fn"
-        |"for"
-        |"in"
-        |"is"
-        |"match"
-        |"mod"
-        |"mut"
-        |"not"
-        |"or"
-        |"out"
-        |"priv"
-        |"pub"
-        |"return"
-        |"then"
-        |"trait"
-        |"type"
-        |"use"
-        |"with"
-        |"while"
-        |"yield"
-    )
+    matches!(str, |"_"| "and"
+        | "as"
+        | "const"
+        | "copy"
+        | "else"
+        | "for"
+        | "in"
+        | "is"
+        | "match"
+        | "mod"
+        | "mut"
+        | "not"
+        | "or"
+        | "out"
+        | "priv"
+        | "pub"
+        | "ref"
+        | "return"
+        | "then"
+        | "trait"
+        | "type"
+        | "use"
+        | "when"
+        | "while"
+        | "yield")
 }
 
 pub const NUMBER_DELIMITER: char = '\'';
@@ -126,5 +148,3 @@ bitflags! {
         const _ = 0b0000_1111;
     }
 }
-
-

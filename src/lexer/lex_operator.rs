@@ -1,28 +1,52 @@
-use crate::lexer::{State, Token, TokenIterator};
+use crate::lexer::TokenType::{Close, Ellipsis, Operator};
 use crate::lexer::lex::skip_while_op;
-use crate::lexer::TokenType::Operator;
+use crate::lexer::{State, Token, TokenIterator};
+use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
 
 pub fn lex_operator(it: &mut TokenIterator) -> Token {
-    let Some(State{num, col, ..}) = it.current
-        else { unreachable!() };
+    let Some(State { num, col, .. }) = it.current else {
+        unreachable!()
+    };
     let row = it.row;
     let line = it.lines[row].clone();
-    
+
     skip_while_op(it);
-    
-    let end_pos= if let Some(State{num : end_pos @ 1.., ..}) = it.current { 
-        end_pos
-    } else {
-        line.len()
+
+    let mut is_close = false;
+
+    if matches!((|| Some((it.current?, it.current?.char.general_category())))(),
+        Some((
+            State{num : 1.., char, ..},
+            GeneralCategory::ClosePunctuation | GeneralCategory::FinalPunctuation,
+        ))
+        if char != ')'
+    ) {
+        it.next_char();
+        is_close = true;
     };
-    
-    //todo: mb add some more difficult behaviour if needed
-    
-    Token{
-        slice: line.slice(num..end_pos),
+
+    let slice = if let Some(State {
+        num: end_pos @ 1.., ..
+    }) = it.current
+    {
+        line.slice(num..end_pos)
+    } else {
+        line.slice(num..)
+    };
+
+    let ty = if slice == "..." {
+        Ellipsis
+    } else if is_close {
+        Close
+    } else {
+        Operator
+    };
+
+    Token {
+        slice,
         row,
         col,
         num,
-        ty: Operator,
+        ty,
     }
 }
