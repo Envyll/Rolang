@@ -5,28 +5,40 @@ use crate::lexer::lex_number::lex_number;
 use crate::lexer::lex_operator::lex_operator;
 use crate::lexer::lex_string::lex_string;
 use crate::lexer::lex_symbol::lex_symbol;
-use crate::lexer::{State, Token, TokenIterator};
+use crate::lexer::{BracketType, Lines, State, Token, TokenIterator};
 use unicode_properties::*;
 
 impl TokenIterator {
-    pub fn new(mut str: &str) -> Self {
-        if str.is_empty() {
-            str = " ";
+    pub fn new(str: &str) -> Self {
+        let mut buffer = std::string::String::with_capacity(str.len() + 2);
+        let mut ranges = vec![0usize, 1usize];
+
+        buffer.push(' ');
+
+        for line in str.lines() {
+            buffer += " ";
+            buffer += line;
+            ranges.push(buffer.len());
         }
 
-        let lines: Vec<_> = str
-            .lines()
-            .map(|str| ImStr::from(" ".to_string() + str.trim_end()))
-            .collect();
+        let buffer = ImStr::from(buffer);
 
-        let mut result = TokenIterator {
+        let lines = ranges
+            .iter()
+            .zip(ranges.iter().skip(1))
+            .map(|(r1, r2)|buffer.slice( r1..r2))
+            .collect::<Vec<_>>();
+
+        TokenIterator {
             row: 0,
             iter: lines[0].char_indices().enumerate(),
             lines,
-            current: None,
-        };
-        result.next_char();
-        result
+            current: Some(State {
+                num: 0,
+                col: 0,
+                char: ' ',
+            }),
+        }
     }
 
     pub(super) fn next_char(&mut self) -> &mut Self {
@@ -65,10 +77,11 @@ impl TokenIterator {
         }
         self
     }
+}
 
+impl Lines for TokenIterator {
     #[inline]
-    #[allow(unused)]
-    pub(crate) fn lines(&self) -> &Vec<ImStr> {
+    fn lines(&self) -> &[ImStr] {
         &self.lines
     }
 }
@@ -93,6 +106,7 @@ impl Iterator for TokenIterator {
                 ('_', ..) | (_, _, GeneralCategoryGroup::Letter) => Some(lex_symbol(self)),
                 ('"', ..) => Some(lex_string(self, start)),
                 ('\'', ..) => Some(lex_char(self, start)),
+
                 ('#', ..) => {
                     self.next_char();
                     if let Some(State { char: '#', .. }) = self.current {
@@ -129,112 +143,28 @@ impl Iterator for TokenIterator {
                         ty: Semicolon,
                     })
                 }
-                (':', ..) => {
-                    self.next_char();
-                    if let Some(State {
-                        char: ':',
-                        num: 1..,
-                        ..
-                    }) = self.current
-                    {
-                        self.next_char();
-                        if let Some(State {
-                            char: '=',
-                            num: 1..,
-                            ..
-                        }) = self.current
-                        {
-                            self.next_char();
-                            Some(Token {
-                                slice: "::=".into(),
-                                row,
-                                col,
-                                num,
-                                ty: ColonColonEq,
-                            })
-                        } else {
-                            Some(Token {
-                                slice: "::".into(),
-                                row,
-                                col,
-                                num,
-                                ty: ColonColon,
-                            })
-                        }
-                    } else if let Some(State {
-                        char: '=',
-                        num: 1..,
-                        ..
-                    }) = self.current
-                    {
-                        self.next_char();
-                        Some(Token {
-                            slice: ":=".into(),
-                            row,
-                            col,
-                            num,
-                            ty: ColonEq,
-                        })
-                    } else {
-                        Some(Token {
-                            slice: ':'.into(),
-                            row,
-                            col,
-                            num,
-                            ty: Colon,
-                        })
-                    }
-                }
-                ('(', ..) => {
-                    self.next_char();
-                    Some(Token {
-                        slice: char.into(),
-                        row,
-                        col,
-                        num,
-                        ty: Open,
-                    })
-                }
-                (')', ..) => {
-                    self.next_char();
-                    Some(Token {
-                        slice: char.into(),
-                        row,
-                        col,
-                        num,
-                        ty: Close,
-                    })
-                }
-                // [ { …
+                // ( [ { …
                 (
                     _,
                     GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation,
                     GeneralCategoryGroup::Punctuation,
                 ) => {
                     self.next_char();
-                    skip_while_op(self);
-
-                    let ty = if matches!((|| Some((self.current?, self.current?.char.general_category())))(), 
-                    Some((
-                        State{char, col: col2 @ 1.., ..},
-                        GeneralCategory::ClosePunctuation | GeneralCategory::FinalPunctuation,
-                    )) if char != ')' && col2 != col + 1)
-                    {
+                    let with_stick = if let Some(State{num: 1.., char: '|', ..}) = self.current {
                         self.next_char();
-                        Operator
-                    } else {
-                        Open
-                    };
+                        true
+                    } else { false };
 
-                    let slice = if let Some(State {
-                        num: curr_num @ 1..,
-                        ..
-                    }) = self.current
-                    {
-                        self.lines[row].slice(num..curr_num)
-                    } else {
-                        self.lines[row].slice(num..)
-                    };
+                    let ty = Open(
+                        match char {
+                            '(' => BracketType::Round {with_stick},
+                            '[' => BracketType::Square {with_stick},
+                            '{' => BracketType::Curly {with_stick},
+                            _   => BracketType::NonAscii {with_stick},
+                        }
+                    );
+
+                    let slice = self.lines[row].slice(num..num + char.len_utf8() + with_stick as usize);
 
                     Some(Token {
                         slice,
@@ -263,8 +193,9 @@ impl Iterator for TokenIterator {
 }
 
 fn lex_indent(it: &mut TokenIterator) -> Option<Token> {
+    it.next_char();
     let len = skip_whitespaces_and_get_len(it);
-    let Some(State { num: num @ 1.., .. }) = it.current else {
+    let Some(State { num, .. }) = it.current else {
         return None;
     };
     let row = it.row;
@@ -304,7 +235,7 @@ pub(super) fn skip_while_alnum(it: &mut TokenIterator) {
 }
 
 pub(super) fn is_op(char: char) -> bool {
-    !matches!(char, |';'| ',' | '#' | '\'' | '"' | '_' | ':')
+    !matches!(char, |';'| ',' | '#' | '\'' | '"' | '_')
         && matches!(
             char.general_category_group(),
             GeneralCategoryGroup::Punctuation | GeneralCategoryGroup::Symbol
@@ -319,30 +250,18 @@ pub(super) fn is_op(char: char) -> bool {
 
 #[inline]
 pub(super) fn skip_while_op(it: &mut TokenIterator) {
-    let mut len = 0usize;
-    let mut dots = 0usize;
-
     skip_while(
-        move |ch| {
-            len += 1;
-            if ch == '.' {
-                dots += 1;
-            }
-            (len != 3 || len != dots) && is_op(ch)
-        },
+        is_op,
         it,
     )
 }
 
 pub(super) fn skip_whitespaces_and_get_len(it: &mut TokenIterator) -> usize {
     let mut len = 0;
-    while let Some(State { char, num, .. }) = it.current {
-        if num == 0 {
-            len = 0
-        }
-        len += match char {
-            ' ' => 1,
-            '\n' => 4,
+    while let Some(State { char, num: 1.., .. }) = it.current {
+        match char {
+            ' ' => len += 1,
+            '\t' => len = len + 4 - len % 4,
             _ => return len,
         };
         it.next_char();

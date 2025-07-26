@@ -11,6 +11,8 @@ mod lex_operator;
 mod lex_string;
 mod lex_symbol;
 
+// mb migrate to &str instead of ImStr??
+
 #[derive(Debug, Clone)]
 pub struct Token {
     /// Token string representation
@@ -26,8 +28,8 @@ pub struct Token {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenType {
-    Open,
-    Close,
+    Open(BracketType),
+    Close(BracketType),
     Operator,
     Comma,
     Semicolon,
@@ -36,7 +38,6 @@ pub enum TokenType {
     ColonEq,
     ColonColon,
     ColonColonEq,
-    Ellipsis,
     Symbol(ImStr),
     Keyword(ImStr),
     Argument(ImStr),
@@ -90,8 +91,24 @@ pub enum StringValue {
     },
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum BracketType {
+    /// Indentation open/close
+    Indent,
+    /// `()` `(||)`
+    Round{with_stick: bool},
+    /// `[]` `[||]`
+    Square{with_stick: bool},
+    /// `{}` `{||}`
+    Curly{with_stick: bool},
+    /// `⁅⁆` `⟨||⟩` …
+    NonAscii{with_stick: bool},
+}
+
 pub fn is_keyword(str: &str) -> bool {
-    matches!(str, |"_"| "and"
+    matches!(str,
+        | "_"
+        | "and"
         | "as"
         | "const"
         | "copy"
@@ -115,7 +132,8 @@ pub fn is_keyword(str: &str) -> bool {
         | "use"
         | "when"
         | "while"
-        | "yield")
+        | "yield"
+    )
 }
 
 pub const NUMBER_DELIMITER: char = '\'';
@@ -147,4 +165,8 @@ bitflags! {
 
         const _ = 0b0000_1111;
     }
+}
+
+pub trait Lines {
+    fn lines(&self) -> &[ImStr];
 }

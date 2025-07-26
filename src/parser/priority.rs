@@ -1,5 +1,4 @@
 use crate::lexer::{Token, TokenType};
-use unicode_properties::*;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
@@ -8,12 +7,11 @@ pub enum Priority {
     Comma, // ,
 
     Or,  // or else … left
-    And, // …<- : := ::= not and then match while for … right
+    And, // …<- …<-| : := ::= not and then match while for … right
 
-    Pipe, // …>… …<… …|… …&… left
-    UnPipe,
+    Pipe, // …>… …=… …<… …|… …&… …:… left
 
-    Range, // .. < > = in … right
+    Range, // .. right
 
     BitOr,    // || right
     BitXor,   // ^^ right
@@ -25,9 +23,8 @@ pub enum Priority {
     UnAdd,
     Mul,   // * /
     Pow,   // ** right
-    Apply, // apply left, ! . ? … nullary, …=> as right
+    Apply, // apply left, anything nullary; => as … right
     Path,  // ::
-    UnPath,
 }
 
 pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
@@ -36,21 +33,17 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     } else {
         it
     };
+
+    if let "." | "?." = it {
+        return (Priority::Path, Priority::Path);
+    }
+    
     let it = if it.ends_with('.') {
         &it[..it.len() - 1]
     } else {
         it
     };
 
-    if it.ends_with(|ch: char| {
-        matches!(
-            ch.general_category(),
-            GeneralCategory::FinalPunctuation | GeneralCategory::ClosePunctuation
-        )
-    }) {
-        return (Priority::Apply, Priority::Path);
-    }
-    
     if it.ends_with("=>") {
         return (Priority::Apply, Priority::Apply);
     }
@@ -72,12 +65,18 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     if it.ends_with("<-|") {
         return (Priority::And, Priority::And);
     }
-
-    if it.ends_with(['=', '>', '<', '.']) {
+    if it.ends_with("..") {
+        return (Priority::Apply, Priority::Path);
+    }
+    if it.ends_with('.') {
         return (Priority::Range, Priority::Range);
     }
-    if it.contains(['|', '&', '<', '>']) {
-        return (Priority::Pipe, Priority::UnAdd);
+    
+    if it.contains("..") {
+        return (Priority::Range, Priority::Range);
+    }
+    if it.contains(['|', '&', '<', '>', '=', ':']) {
+        return (Priority::Pipe, Priority::Range);
     }
 
     if it.ends_with("++") {
@@ -109,11 +108,10 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
 pub fn priority_of_keyword(it: &str) -> (Priority, Priority) {
     use Priority::*;
     match it {
-        "not" => (Apply, And),
-        "and" | "then" | "for" | "match" | "while" => (And, And),
+        "and" | "then" | "for" | "match" | "while" | "not" => (And, And),
         "or" | "else" => (Or, And),
         "return" | "yield" => (Apply, Or),
-        "in" | "is" => (Range, Range),
+        "in" | "is" => (Pipe, Range),
         "as" => (Apply, Apply),
         _ => (Apply, Path),
     }
@@ -123,17 +121,16 @@ impl Token {
     pub fn priority(&self) -> (Priority, Priority) {
         use Priority::*;
         match self.ty {
-            TokenType::Open => (Apply, Close),
-            TokenType::Close => (Close, Path),
+            TokenType::Open(_) => (Apply, Comma),
+            TokenType::Close(_) => (Close, Path),
             TokenType::Operator => priority_of_operator(&self.slice),
             TokenType::Comma => (Comma, Comma),
-            TokenType::Semicolon => (Close, Close),
-            TokenType::Sharp => todo!(),
+            TokenType::Semicolon => (Close, Comma),
+            TokenType::Sharp => (Path, Path),
             TokenType::Colon => (And, And),
             TokenType::ColonEq => (And, Or),
-            TokenType::ColonColon => (Path, UnPath),
+            TokenType::ColonColon => (Path, Path), // left though
             TokenType::ColonColonEq => (And, Or),
-            TokenType::Ellipsis => (Apply, Path),
             TokenType::Symbol(_) => (Apply, Path),
             TokenType::Keyword(ref slice) => priority_of_keyword(&slice),
             TokenType::Argument(_) => (Apply, Path),

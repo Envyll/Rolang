@@ -24,22 +24,22 @@ fn norm_tokens(str: &str) -> Vec<TokenType> {
 fn simple_indent_block() {
     let tokens = norm_tokens(
         "           ## (
-        a := 1 (        ## (
+        a := 1 (|       ## (
             b := 2
                 c := 3  ## ;
             d := 3      ## )
-        )               ## ;
+        |)              ## ;
         e := 4          ## ;)
     ",
     );
 
     let opens = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Open))
+        .filter(|t| matches!(t, TokenType::Open(_)))
         .count();
     let closes = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Close))
+        .filter(|t| matches!(t, TokenType::Close(_)))
         .count();
     let semis = tokens
         .iter()
@@ -53,15 +53,17 @@ fn simple_indent_block() {
 
 #[test]
 fn no_semicolon_after_control_flow() {
-    let tokens = norm_tokens(
-        "
-        x then
-            x
-        else
-            x
-        x
-    ",
-    );
+    let str = "
+        \tx then
+           \t\tx
+         \telse
+              \tx
+           \tx
+    ";
+
+    dbg!(TokenIterator::new(str).map(|t| t.ty).collect::<Vec<_>>());
+
+    let tokens = norm_tokens(str);
     /* <(>
         x then <(>
             x <)>
@@ -76,11 +78,11 @@ fn no_semicolon_after_control_flow() {
         .count();
     let opens = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Open))
+        .filter(|t| matches!(t, TokenType::Open(_)))
         .count();
     let closes = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Close))
+        .filter(|t| matches!(t, TokenType::Close(_)))
         .count();
     let semis = tokens
         .iter()

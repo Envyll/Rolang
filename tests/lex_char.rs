@@ -1,11 +1,16 @@
 use rolang::lexer::*;
 
-fn lex_one(src: &str) -> TokenType {
-    let mut iter = TokenIterator::new(src);
-    iter.next(); // skip indent
-    let res = iter.next().unwrap().ty;
+fn lex(src: &str) -> Vec<TokenType> {
+    let res = TokenIterator::new(src)
+        .map(|tok| tok.ty)
+        .skip_while(|tok| matches!(tok, TokenType::Indent(_)))
+        .collect();
     dbg!(&res);
     res
+}
+
+fn lex_one(src: &str) -> TokenType {
+    lex(src)[0].clone()
 }
 
 #[test]

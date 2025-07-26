@@ -22,6 +22,7 @@ pub fn lex_symbol(it: &mut TokenIterator) -> Token {
         }
     };
 
+    it.next_char();
     skip_while_alnum(it);
 
     match it.current {
