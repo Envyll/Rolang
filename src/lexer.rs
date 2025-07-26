@@ -96,19 +96,17 @@ pub enum BracketType {
     /// Indentation open/close
     Indent,
     /// `()` `(||)`
-    Round{with_stick: bool},
+    Round { with_stick: bool },
     /// `[]` `[||]`
-    Square{with_stick: bool},
+    Square { with_stick: bool },
     /// `{}` `{||}`
-    Curly{with_stick: bool},
+    Curly { with_stick: bool },
     /// `⁅⁆` `⟨||⟩` …
-    NonAscii{with_stick: bool},
+    NonAscii { with_stick: bool },
 }
 
 pub fn is_keyword(str: &str) -> bool {
-    matches!(str,
-        | "_"
-        | "and"
+    matches!(str, |"_"| "and"
         | "as"
         | "const"
         | "copy"
@@ -132,8 +130,7 @@ pub fn is_keyword(str: &str) -> bool {
         | "use"
         | "when"
         | "while"
-        | "yield"
-    )
+        | "yield")
 }
 
 pub const NUMBER_DELIMITER: char = '\'';

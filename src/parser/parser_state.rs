@@ -1,7 +1,7 @@
 use crate::lexer::{Lines, Token};
 use crate::parser::{AST, ASTErr, ASTExpr, ExprInd, TokenInd};
-use std::ops::{AddAssign, DivAssign, ShlAssign};
 use std::iter::IntoIterator;
+use std::ops::{AddAssign, DivAssign, ShlAssign};
 
 pub struct ParserState<'a, IterT: Iterator<Item = Token>> {
     completion_stack: Vec<(TokenInd, Box<dyn FnOnce(&mut Self) + 'a>)>,
@@ -27,7 +27,10 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         self.curr_token_ind.0 += 1;
     }
 
-    pub fn parse(tokens_iterable: impl IntoIterator<IntoIter = IterT> + Lines, f: impl FnOnce(&mut Self) + 'a) -> AST {
+    pub fn parse(
+        tokens_iterable: impl IntoIterator<IntoIter = IterT> + Lines,
+        f: impl FnOnce(&mut Self) + 'a,
+    ) -> AST {
         let lines = tokens_iterable.lines().to_vec();
         let mut this = Self {
             completion_stack: vec![],
@@ -79,17 +82,14 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             lines,
         }
     }
-    
+
     pub fn expressions_len(&self) -> ExprInd {
         ExprInd(self.expressions.len())
     }
 }
 
-impl<
-    'a,
-    IterT: Iterator<Item = Token>,
-    FnT: FnOnce(&mut ParserState<'a, IterT>) + 'a,
-> ShlAssign<FnT> for ParserState<'a, IterT>
+impl<'a, IterT: Iterator<Item = Token>, FnT: FnOnce(&mut ParserState<'a, IterT>) + 'a>
+    ShlAssign<FnT> for ParserState<'a, IterT>
 {
     /// Pushes closure
     fn shl_assign(&mut self, rhs: FnT) {
@@ -98,25 +98,22 @@ impl<
     }
 }
 
-impl<'a, IterT: Iterator<Item = Token>> AddAssign<ASTExpr>
-    for ParserState<'a, IterT>
-{
+impl<'a, IterT: Iterator<Item = Token>> AddAssign<ASTExpr> for ParserState<'a, IterT> {
     /// Pushes parsed expression and current index
     fn add_assign(&mut self, rhs: ASTExpr) {
         self.expressions.push((self.curr_token_ind, rhs));
     }
 }
 
-impl<'a, IterT: Iterator<Item = Token>> DivAssign<ASTErr>
-    for ParserState<'a, IterT>
-{
+impl<'a, IterT: Iterator<Item = Token>> DivAssign<ASTErr> for ParserState<'a, IterT> {
     /// Pushes error for the next expression
     fn div_assign(&mut self, rhs: ASTErr) {
         self.errors.push((ExprInd(self.expressions.len()), rhs));
     }
 }
 
-#[macro_export] macro_rules! push_fn {
+#[macro_export]
+macro_rules! push_fn {
     {$this:ident => $($stmt:stmt;)*} => {
         *$this <<= move |$this| {{$($stmt)*};}
     };

@@ -12,7 +12,10 @@ fn parse(str: &str) -> AST {
 #[test]
 fn visualize() {
     // もうそのままでOKと思う。=￣ω￣= (silly)
-    println!("{}", visualize_ast(&parse("
+    println!(
+        "{}",
+        visualize_ast(&parse(
+            "
     abc [ 1) + 3 ]
     abc.def::zzz
     then xyz
@@ -26,5 +29,7 @@ fn visualize() {
     (a => b) type [a] :=
         self.fun d := 
         self.xxx := a
-    ")));
+    "
+        ))
+    );
 }

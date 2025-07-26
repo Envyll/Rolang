@@ -1,4 +1,4 @@
-use crate::parser::{AST, ASTExpr, ASTErr, ExprInd, };
+use crate::parser::{AST, ASTErr, ASTExpr, ExprInd};
 
 pub fn visualize_ast(ast: &AST) -> String {
     let mut output = String::new();
@@ -61,7 +61,7 @@ fn visualize_expr(ast: &AST, expr: &ASTExpr, depth: usize, out: &mut String) {
             out.push_str(&format!("{indent} Path: \n"));
             for expr in next {
                 visualize_expr(&ast, &ast.expressions[expr.0].1, depth + 1, out);
-            }            
+            }
         }
         ASTExpr::Braced(op, mid, cl) => {
             let op = &ast.tokens[op.0].slice;

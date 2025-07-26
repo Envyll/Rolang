@@ -67,11 +67,13 @@ impl Iterator for NormalizedTokenIterator {
                     })
                 }
                 Some(Token {
-                         ty: TokenType::Indent(len),
-                         slice,
-                         row,
-                         ..
-                     }) if *len < *peak.unwrap_or(&0) && is_prev_good_for_indent_or_dedent(&self.next) => {
+                    ty: TokenType::Indent(len),
+                    slice,
+                    row,
+                    ..
+                }) if *len < *peak.unwrap_or(&0)
+                    && is_prev_good_for_indent_or_dedent(&self.next) =>
+                {
                     self.good_for_semicolon = true;
                     self.good_for_indent = false;
                     let row = *row;
@@ -198,13 +200,12 @@ fn is_prev_good_for_semicolon(tok: &Option<Token>) -> bool {
 }
 
 fn is_next_good_for_indent(Token { ty, slice, .. }: &Token) -> bool {
-    match ty { 
-        | TokenType::Open(_)
+    match ty {
+        TokenType::Open(_)
         | TokenType::Colon
         | TokenType::ColonColon
         | TokenType::ColonEq
-        | TokenType::ColonColonEq 
-        => true,
+        | TokenType::ColonColonEq => true,
         TokenType::Operator => is_exch(&slice),
         TokenType::Keyword(slice) => is_flow(&slice),
         _ => false,
@@ -213,9 +214,7 @@ fn is_next_good_for_indent(Token { ty, slice, .. }: &Token) -> bool {
 
 #[inline]
 fn is_flow(str: &str) -> bool {
-    matches!(str, 
-        | "then"
-        | "else"
+    matches!(str, |"then"| "else"
         | "or"
         | "and"
         | "match"

@@ -3,13 +3,13 @@ use crate::lexer::Token;
 use crate::normalizer::NormalizedTokenIterator;
 use crate::parser::parser_state::ParserState;
 
+mod parse_any;
+mod parse_apply;
+mod parse_brackets;
+mod parse_path;
 mod parser_old;
 pub mod parser_state;
 pub mod priority;
-mod parse_any;
-mod parse_brackets;
-mod parse_path;
-mod parse_apply;
 pub mod visualize;
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -19,7 +19,9 @@ pub struct TokenInd(pub usize);
 pub struct ExprInd(pub usize);
 
 impl ExprInd {
-    pub fn prev(self) -> Option<Self> {Some(Self(self.0.checked_sub(1)?))}
+    pub fn prev(self) -> Option<Self> {
+        Some(Self(self.0.checked_sub(1)?))
+    }
 }
 
 impl From<usize> for TokenInd {

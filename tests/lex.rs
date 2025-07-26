@@ -169,14 +169,76 @@ fn test_strings_2() {
 fn test_braces() {
     use TokenType::*;
     assert_eq!(lex("").as_slice(), []);
-    assert_eq!(lex("[]"), [Open(BracketType::Square {with_stick: false}), Close(BracketType::Square {with_stick: false})]);
-    assert_eq!(lex("[| |]"), [Open(BracketType::Square {with_stick: true}), Close(BracketType::Square {with_stick: true})]);
-    assert_eq!(lex("(||)"), [Open(BracketType::Round {with_stick: true}), Close(BracketType::Round {with_stick: true})]);
-    assert_eq!(lex("｟〗"), [Open(BracketType::NonAscii {with_stick: false}), Close(BracketType::NonAscii {with_stick: false})]);
-    assert_eq!(lex("[== ==]"), [Open(BracketType::Square {with_stick: false}), Operator, Operator, Close(BracketType::Square {with_stick: false})]);
-    assert_eq!(lex("⁅|abc|⁆"), [Open(BracketType::NonAscii {with_stick: true}), Symbol("abc".into()), Close(BracketType::NonAscii {with_stick: true})]);
-    assert_eq!(lex("【|||】"), [Open(BracketType::NonAscii {with_stick: true}), Operator, Close(BracketType::NonAscii {with_stick: true})]);
+    assert_eq!(
+        lex("[]"),
+        [
+            Open(BracketType::Square { with_stick: false }),
+            Close(BracketType::Square { with_stick: false })
+        ]
+    );
+    assert_eq!(
+        lex("[| |]"),
+        [
+            Open(BracketType::Square { with_stick: true }),
+            Close(BracketType::Square { with_stick: true })
+        ]
+    );
+    assert_eq!(
+        lex("(||)"),
+        [
+            Open(BracketType::Round { with_stick: true }),
+            Close(BracketType::Round { with_stick: true })
+        ]
+    );
+    assert_eq!(
+        lex("｟〗"),
+        [
+            Open(BracketType::NonAscii { with_stick: false }),
+            Close(BracketType::NonAscii { with_stick: false })
+        ]
+    );
+    assert_eq!(
+        lex("[== ==]"),
+        [
+            Open(BracketType::Square { with_stick: false }),
+            Operator,
+            Operator,
+            Close(BracketType::Square { with_stick: false })
+        ]
+    );
+    assert_eq!(
+        lex("⁅|abc|⁆"),
+        [
+            Open(BracketType::NonAscii { with_stick: true }),
+            Symbol("abc".into()),
+            Close(BracketType::NonAscii { with_stick: true })
+        ]
+    );
+    assert_eq!(
+        lex("【|||】"),
+        [
+            Open(BracketType::NonAscii { with_stick: true }),
+            Operator,
+            Close(BracketType::NonAscii { with_stick: true })
+        ]
+    );
     assert_eq!(lex("{|}").len(), 2);
-    assert_eq!(lex("||»|«||"), [Operator, Close(BracketType::NonAscii {with_stick: true}), Operator, Open(BracketType::NonAscii {with_stick: true}), Operator, ]);
-    assert_eq!(lex("©｟日"), [Operator, Open(BracketType::NonAscii {with_stick: false}), Symbol("日".into())]);
+    assert_eq!(
+        lex("||»|«||"),
+        [
+            Operator,
+            Close(BracketType::NonAscii { with_stick: true }),
+            Operator,
+            Open(BracketType::NonAscii { with_stick: true }),
+            Operator,
+        ]
+    );
+    assert_eq!(
+        lex("©｟日"),
+        [
+            Operator,
+            Open(BracketType::NonAscii { with_stick: false }),
+            Symbol("日".into())
+        ]
+    );
 }

@@ -10,7 +10,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn parse_apply(&mut self, left: ExprInd) {
         self.parse_apply_step(left, vec![], true);
     }
-    
+
     pub fn parse_apply_or_stop(&mut self, left: ExprInd) {
         self.parse_apply_step(left, vec![], false);
     }
@@ -23,8 +23,8 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         if let (Priority::Path, _) = curr.priority() {
             let is_not_empty = Rc::new(Cell::new(None));
             let is_not_empty2 = is_not_empty.clone();
-            
-            push_fn!{this => 
+
+            push_fn! {this =>
                 if is_not_empty.get().is_some() {
                     *this += ASTExpr::Unary(ind, this.expressions_len().prev().unwrap())
                 } else {
@@ -32,12 +32,12 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 };
             }
             this.advance();
-            push_fn!{is_not_empty2 = this.try_parse_semiatomic()}
+            push_fn! {is_not_empty2 = this.try_parse_semiatomic()}
         } else if let (Priority::Apply, pr_right) = curr.priority() {
             let is_path = Rc::new(Cell::new(None));
             let is_path2 = is_path.clone();
-            
-            push_fn!{this =>
+
+            push_fn! {this =>
                 if is_path.get().is_some() {
                     this.parse_path_or_stop(this.expressions_len().prev().unwrap());
                 } else {
@@ -54,10 +54,10 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn parse_path_or_stop(&mut self, left: ExprInd) {
         let this = self;
         let curr = this.current().unwrap();
-        
+
         if let TokenType::ColonColon = curr.ty {
             this.parse_path(left);
-        } 
+        }
     }
 
     fn parse_apply_step(&mut self, left: ExprInd, mut frags: Vec<ExprInd>, allow_empty: bool) {
@@ -65,8 +65,8 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
 
         let is_left = Rc::new(Cell::default());
         let is_left2 = is_left.clone();
-        
-        push_fn!{this =>
+
+        push_fn! {this =>
             if let Some(()) = is_left.get() {
                 frags.push(this.expressions_len().prev().unwrap());
                 this.parse_apply_step(left, frags, true);

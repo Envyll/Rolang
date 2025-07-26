@@ -7,13 +7,12 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
-    
     pub fn try_parse_any(&mut self, min_priority: Priority) -> Option<()> {
         let pr = self.current().unwrap().priority();
-        
-        if min_priority == Priority::Path
-        || pr.0 == Priority::Close
-        { None? }
+
+        if min_priority == Priority::Path || pr.0 == Priority::Close {
+            None?
+        }
 
         let this = self;
 
@@ -22,16 +21,15 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let ind = this.curr_token_ind;
         let pr = this.current().unwrap().priority().1;
 
-        push_fn!{this => if is_bin.get().is_some() {
+        push_fn! {this => if is_bin.get().is_some() {
             this.parse_binary(this.expressions_len().prev().unwrap(), min_priority);
         } else {
             this.parse_unary(ind, pr, min_priority);
         };}
-        push_fn!{is_bin2 = this.try_parse_atomic()}
+        push_fn! {is_bin2 = this.try_parse_atomic()}
 
         Some(())
     }
-
 
     pub fn parse_binary_relaxed(&mut self, left: ExprInd, min_priority: Priority) {
         let this = self;
@@ -41,8 +39,8 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let is_anything2 = is_anything.clone();
 
         if pr.0 >= min_priority {
-            push_fn!{this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
-            push_fn!{this => if is_anything.get().is_some() { 
+            push_fn! {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
+            push_fn! {this => if is_anything.get().is_some() {
                     *this += ASTExpr::Binary(left, ind, this.expressions_len().prev().unwrap());
                 } else {
                     *this += ASTExpr::Empty;
@@ -50,25 +48,30 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 };
             }
             this.advance();
-            push_fn!{is_anything2 = this.try_parse_any(pr.1)}
+            push_fn! {is_anything2 = this.try_parse_any(pr.1)}
         };
     }
-    
+
     pub fn parse_binary(&mut self, left: ExprInd, min_priority: Priority) {
         let this = self;
-        
-        push_fn!{this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
-        push_fn!{this.parse_apply_or_stop(this.expressions_len().prev().unwrap(),)}
-        this.parse_path_or_stop(left,)
+
+        push_fn! {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
+        push_fn! {this.parse_apply_or_stop(this.expressions_len().prev().unwrap(),)}
+        this.parse_path_or_stop(left)
     }
 
-    pub fn parse_unary(&mut self, ind: TokenInd, pr_right: Priority, #[allow(unused)] min_priority: Priority) {
+    pub fn parse_unary(
+        &mut self,
+        ind: TokenInd,
+        pr_right: Priority,
+        #[allow(unused)] min_priority: Priority,
+    ) {
         let this = self;
 
         let is_anything = Rc::new(Cell::new(None));
         let is_anything2 = is_anything.clone();
-        push_fn!{this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), pr_right)}
-        push_fn!{this =>
+        push_fn! {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), pr_right)}
+        push_fn! {this =>
             let expr_len = this.expressions_len();
             if is_anything.get().is_some() {
                 *this += ASTExpr::Unary(ind, expr_len.prev().unwrap())

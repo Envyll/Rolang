@@ -37,7 +37,7 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     if let "." | "?." = it {
         return (Priority::Path, Priority::Path);
     }
-    
+
     let it = if it.ends_with('.') {
         &it[..it.len() - 1]
     } else {
@@ -71,7 +71,7 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     if it.ends_with('.') {
         return (Priority::Range, Priority::Range);
     }
-    
+
     if it.contains("..") {
         return (Priority::Range, Priority::Range);
     }

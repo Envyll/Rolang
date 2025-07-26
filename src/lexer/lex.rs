@@ -26,7 +26,7 @@ impl TokenIterator {
         let lines = ranges
             .iter()
             .zip(ranges.iter().skip(1))
-            .map(|(r1, r2)|buffer.slice( r1..r2))
+            .map(|(r1, r2)| buffer.slice(r1..r2))
             .collect::<Vec<_>>();
 
         TokenIterator {
@@ -150,21 +150,27 @@ impl Iterator for TokenIterator {
                     GeneralCategoryGroup::Punctuation,
                 ) => {
                     self.next_char();
-                    let with_stick = if let Some(State{num: 1.., char: '|', ..}) = self.current {
+                    let with_stick = if let Some(State {
+                        num: 1..,
+                        char: '|',
+                        ..
+                    }) = self.current
+                    {
                         self.next_char();
                         true
-                    } else { false };
+                    } else {
+                        false
+                    };
 
-                    let ty = Open(
-                        match char {
-                            '(' => BracketType::Round {with_stick},
-                            '[' => BracketType::Square {with_stick},
-                            '{' => BracketType::Curly {with_stick},
-                            _   => BracketType::NonAscii {with_stick},
-                        }
-                    );
+                    let ty = Open(match char {
+                        '(' => BracketType::Round { with_stick },
+                        '[' => BracketType::Square { with_stick },
+                        '{' => BracketType::Curly { with_stick },
+                        _ => BracketType::NonAscii { with_stick },
+                    });
 
-                    let slice = self.lines[row].slice(num..num + char.len_utf8() + with_stick as usize);
+                    let slice =
+                        self.lines[row].slice(num..num + char.len_utf8() + with_stick as usize);
 
                     Some(Token {
                         slice,
@@ -250,10 +256,7 @@ pub(super) fn is_op(char: char) -> bool {
 
 #[inline]
 pub(super) fn skip_while_op(it: &mut TokenIterator) {
-    skip_while(
-        is_op,
-        it,
-    )
+    skip_while(is_op, it)
 }
 
 pub(super) fn skip_whitespaces_and_get_len(it: &mut TokenIterator) -> usize {

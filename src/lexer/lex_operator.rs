@@ -15,9 +15,15 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
 
     if let (
         Some(GeneralCategory::ClosePunctuation | GeneralCategory::FinalPunctuation),
-        Some(State{num : curr_num @ 1.., col: curr_col, char}),
-        ) = ((||Some(it.current?.char.general_category()))(), &mut it.current) {
-        
+        Some(State {
+            num: curr_num @ 1..,
+            col: curr_col,
+            char,
+        }),
+    ) = (
+        (|| Some(it.current?.char.general_category()))(),
+        &mut it.current,
+    ) {
         // lone close bracket
         if *curr_col == col {
             let char = *char;
@@ -27,13 +33,13 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
                 row,
                 col,
                 num,
-                ty: Close(match char{
-                    ')' => BracketType::Round{ with_stick: false },
-                    ']' => BracketType::Square{ with_stick: false },
-                    '}' => BracketType::Curly{ with_stick: false },
-                    _ => BracketType::NonAscii{ with_stick: false },
+                ty: Close(match char {
+                    ')' => BracketType::Round { with_stick: false },
+                    ']' => BracketType::Square { with_stick: false },
+                    '}' => BracketType::Curly { with_stick: false },
+                    _ => BracketType::NonAscii { with_stick: false },
                 }),
-            }
+            };
         }
         // close bracket with stick
         if *curr_col == col + 1 && line.as_bytes()[num] == b'|' {
@@ -44,13 +50,13 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
                 row,
                 col,
                 num,
-                ty: Close(match char{
-                    ')' => BracketType::Round{ with_stick: true },
-                    ']' => BracketType::Square{ with_stick: true },
-                    '}' => BracketType::Curly{ with_stick: true },
-                    _ => BracketType::NonAscii{ with_stick: true },
+                ty: Close(match char {
+                    ')' => BracketType::Round { with_stick: true },
+                    ']' => BracketType::Square { with_stick: true },
+                    '}' => BracketType::Curly { with_stick: true },
+                    _ => BracketType::NonAscii { with_stick: true },
                 }),
-            }
+            };
         }
         // go back one char when stick |||'] -> ||'|] , unlikely case
         if line.as_bytes()[*curr_num - 1] == b'|' {
@@ -63,7 +69,7 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
             it.iter = iter_clone;
         }
     }
-    
+
     let slice = if let Some(State {
         num: end_pos @ 1.., ..
     }) = it.current
@@ -76,7 +82,7 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
     let ty = match &slice as &str {
         ":" => Colon,
         "::" => ColonColon,
-        ":=" =>  ColonEq,
+        ":=" => ColonEq,
         "::=" => ColonColonEq,
         _ => Operator,
     };
