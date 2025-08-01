@@ -17,6 +17,7 @@ fn test_parse(str: &str, f: impl FnOnce(&AST, ExprInd)) {
     f(ast, (ast.expressions.len() - 1).into())
 }
 
+#[allow(unused_variables)]
 fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST, ExprInd) {
     move |ast, expr| {
         let len = fns.len();
