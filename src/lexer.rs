@@ -106,31 +106,30 @@ pub enum BracketType {
 }
 
 pub fn is_keyword(str: &str) -> bool {
-    matches!(str, |"_"| "and"
-        | "as"
-        | "const"
-        | "copy"
-        | "else"
-        | "for"
-        | "in"
-        | "is"
-        | "match"
-        | "mod"
-        | "mut"
-        | "not"
-        | "or"
-        | "out"
-        | "priv"
-        | "pub"
-        | "ref"
-        | "return"
-        | "then"
-        | "trait"
-        | "type"
-        | "use"
-        | "when"
-        | "while"
-        | "yield")
+    matches!(
+        str,
+        "_" | "and"
+            | "as"
+            | "const"
+            | "copy"
+            | "else"
+            | "for"
+            | "in"
+            | "is"
+            | "match"
+            | "mut"
+            | "not"
+            | "or"
+            | "priv"
+            | "pub"
+            | "return"
+            | "then"
+            | "type"
+            | "use"
+            | "when"
+            | "while"
+            | "yield"
+    )
 }
 
 pub const NUMBER_DELIMITER: char = '\'';

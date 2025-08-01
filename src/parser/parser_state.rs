@@ -1,5 +1,6 @@
 use crate::lexer::{Lines, Token};
 use crate::parser::{AST, ASTErr, ASTExpr, ExprInd, TokenInd};
+use std::collections::HashMap;
 use std::iter::IntoIterator;
 use std::ops::{AddAssign, DivAssign, ShlAssign};
 
@@ -8,7 +9,7 @@ pub struct ParserState<'a, IterT: Iterator<Item = Token>> {
     tokens: Vec<Token>,
     pub curr_token_ind: TokenInd,
     expressions: Vec<(TokenInd, ASTExpr)>,
-    errors: Vec<(ExprInd, ASTErr)>,
+    errors: HashMap<ExprInd, Vec<ASTErr>>,
     tokens_iter: IterT,
 }
 
@@ -53,14 +54,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                     if expr_token_ind > this.curr_token_ind
                 ) {
                     let curr_expr_ind = ExprInd(this.expressions.len().checked_sub(1).unwrap());
-                    // cleanup "dead" errors
-                    while matches!(
-                        this.errors.last(),
-                        Some(&(expr_ind, _))
-                        if expr_ind == curr_expr_ind
-                    ) {
-                        this.errors.pop();
-                    }
+                    this.errors.remove(&curr_expr_ind);
                     this.expressions.pop();
                 }
                 // run the last closure
@@ -108,7 +102,13 @@ impl<'a, IterT: Iterator<Item = Token>> AddAssign<ASTExpr> for ParserState<'a, I
 impl<'a, IterT: Iterator<Item = Token>> DivAssign<ASTErr> for ParserState<'a, IterT> {
     /// Pushes error for the next expression
     fn div_assign(&mut self, rhs: ASTErr) {
-        self.errors.push((ExprInd(self.expressions.len()), rhs));
+        let ind = ExprInd(self.expressions.len());
+        if let Some(v) = self.errors.get_mut(&ind) {
+            v.push(rhs);
+        } else {
+            self.errors
+                .insert(ExprInd(self.expressions.len()), vec![rhs]);
+        }
     }
 }
 

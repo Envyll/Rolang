@@ -225,5 +225,5 @@ fn is_flow(str: &str) -> bool {
 
 #[inline]
 fn is_exch(str: &str) -> bool {
-    str.ends_with("<-") | str.ends_with("<-|")
+    str.starts_with("<-")
 }

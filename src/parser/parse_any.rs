@@ -10,7 +10,10 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn try_parse_any(&mut self, min_priority: Priority) -> Option<()> {
         let pr = self.current().unwrap().priority();
 
-        if min_priority == Priority::Path || pr.0 == Priority::Close {
+        if min_priority == Priority::Path
+            || pr.0 == Priority::Close
+            || min_priority == Priority::Apply && pr.0 < Priority::Apply
+        {
             None?
         }
 
@@ -19,14 +22,13 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let is_bin = Rc::new(Cell::new(None));
         let is_bin2 = is_bin.clone();
         let ind = this.curr_token_ind;
-        let pr = this.current().unwrap().priority().1;
 
         push_fn! {this => if is_bin.get().is_some() {
             this.parse_binary(this.expressions_len().prev().unwrap(), min_priority);
         } else {
-            this.parse_unary(ind, pr, min_priority);
+            this.parse_unary(ind, min_priority);
         };}
-        push_fn! {is_bin2 = this.try_parse_atomic()}
+        push_fn! {is_bin2 = this.try_parse_semiatomic()}
 
         Some(())
     }
@@ -60,17 +62,15 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         this.parse_path_or_stop(left)
     }
 
-    pub fn parse_unary(
-        &mut self,
-        ind: TokenInd,
-        pr_right: Priority,
-        #[allow(unused)] min_priority: Priority,
-    ) {
+    pub fn parse_unary(&mut self, ind: TokenInd, min_priority: Priority) {
         let this = self;
+        let pr_right = this.current().unwrap().priority().1;
 
         let is_anything = Rc::new(Cell::new(None));
         let is_anything2 = is_anything.clone();
-        push_fn! {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), pr_right)}
+        if min_priority < pr_right {
+            push_fn! {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
+        }
         push_fn! {this =>
             let expr_len = this.expressions_len();
             if is_anything.get().is_some() {

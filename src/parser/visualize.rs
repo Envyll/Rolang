@@ -1,34 +1,43 @@
 use crate::parser::{AST, ASTErr, ASTExpr, ExprInd};
 
-pub fn visualize_ast(ast: &AST) -> String {
+pub fn visualize_ast_full(ast: &AST) -> String {
     let mut output = String::new();
 
-    for (i, (token_ind, expr)) in ast.expressions.iter().enumerate() {
+    for i in 0..ast.expressions.len() {
         let expr_ind = ExprInd(i);
-        let indent = "  ";
 
-        // Заголовок
-        output += &format!("[Expr #{i}] @ {:?}:\n", token_ind);
+        visualize_expr(ast, expr_ind, 1, &mut output);
 
-        // Тело выражения
-        visualize_expr(ast, expr, 1, &mut output);
-
-        // Ошибки (если есть)
-        for (err_ind, err) in &ast.errors {
-            if *err_ind == expr_ind {
-                output += &format!("{indent}⚠️  Error: {}\n", format_ast_error(err));
-            }
-        }
-
-        output += "\n";
+        output += "│ \n";
     }
 
     output
 }
 
-fn visualize_expr(ast: &AST, expr: &ASTExpr, depth: usize, out: &mut String) {
-    let indent = "  ".repeat(depth);
-    match expr {
+pub fn visualize_ast(ast: &AST) -> String {
+    let mut output = String::new();
+
+    let expr_ind = (ast.expressions.len() - 1).into();
+    visualize_expr(ast, expr_ind, 0, &mut output);
+
+    output
+}
+
+fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
+    let indent = if depth == 0 {
+        *out += &format!("{expr}\n");
+        "".to_string()
+    } else {
+        let indent = "│ ".repeat(depth - 1);
+        *out += &format!("{indent}┝━{expr}\n");
+        indent + "│ "
+    };
+    if let Some(errs) = ast.errors.get(&expr) {
+        for err in errs {
+            *out += &format!("{indent}⚠️  Error: {}\n", format_ast_error(err));
+        }
+    }
+    match ast[expr] {
         ASTExpr::Simple(lit) => {
             let lit = &ast.tokens[lit.0].slice;
             out.push_str(&format!("{indent}Simple: {lit:?}\n"));
@@ -36,43 +45,43 @@ fn visualize_expr(ast: &AST, expr: &ASTExpr, depth: usize, out: &mut String) {
         ASTExpr::Binary(lhs, op, rhs) => {
             let op = &ast.tokens[op.0].slice;
             out.push_str(&format!("{indent}Binary: {op:?}\n"));
-            visualize_expr(&ast, &ast.expressions[lhs.0].1, depth + 1, out);
-            visualize_expr(&ast, &ast.expressions[rhs.0].1, depth + 1, out);
+            visualize_expr(&ast, lhs, depth + 1, out);
+            visualize_expr(&ast, rhs, depth + 1, out);
         }
         ASTExpr::Unary(op, expr) => {
             let op = &ast.tokens[op.0].slice;
             out.push_str(&format!("{indent}UnaryOp: {op:?}\n"));
-            visualize_expr(&ast, &ast.expressions[expr.0].1, depth + 1, out);
+            visualize_expr(&ast, expr, depth + 1, out);
         }
-        ASTExpr::Apply(func, args) => {
+        ASTExpr::Apply(func, ref args) => {
             out.push_str(&format!("{indent}Apply:\n"));
-            visualize_expr(&ast, &ast.expressions[func.0].1, depth + 1, out);
-            out.push_str(&format!("{indent} Args:\n"));
-            for arg in args {
-                visualize_expr(&ast, &ast.expressions[arg.0].1, depth + 1, out);
+            visualize_expr(&ast, func, depth + 1, out);
+            out.push_str(&format!("{indent}Args:\n"));
+            for &arg in args {
+                visualize_expr(&ast, arg, depth + 1, out);
             }
         }
         ASTExpr::Empty => {
             out.push_str(&format!("{indent}Empty\n"));
         }
-        ASTExpr::Path(root, next) => {
+        ASTExpr::Path(root, ref next) => {
             out.push_str(&format!("{indent}Root: \n"));
-            visualize_expr(&ast, &ast.expressions[root.0].1, depth + 1, out);
-            out.push_str(&format!("{indent} Path: \n"));
-            for expr in next {
-                visualize_expr(&ast, &ast.expressions[expr.0].1, depth + 1, out);
+            visualize_expr(&ast, root, depth + 1, out);
+            out.push_str(&format!("{indent}Path: \n"));
+            for &expr in next {
+                visualize_expr(&ast, expr, depth + 1, out);
             }
         }
-        ASTExpr::Braced(op, mid, cl) => {
+        ASTExpr::Braced(op, ref mid, cl) => {
             let op = &ast.tokens[op.0].slice;
             let cl = &ast.tokens[cl.0].slice;
             out.push_str(&format!("{indent}Braced: {op:?}, {cl:?}\n"));
-            for expr in mid {
-                visualize_expr(&ast, &ast.expressions[expr.0].1, depth + 1, out);
+            for &expr in mid {
+                visualize_expr(&ast, expr, depth + 1, out);
             }
         }
         #[allow(unreachable_patterns)]
-        other => {
+        ref other => {
             out.push_str(&format!("{indent}{other:?} (not implemented)\n"));
         }
     }

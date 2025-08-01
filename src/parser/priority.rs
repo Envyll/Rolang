@@ -9,7 +9,7 @@ pub enum Priority {
     Or,  // or else … left
     And, // …<- …<-| : := ::= not and then match while for … right
 
-    Pipe, // …>… …=… …<… …|… …&… …:… left
+    Pipe, // >… =… <… |… &… :… left
 
     Range, // .. right
 
@@ -28,77 +28,60 @@ pub enum Priority {
 }
 
 pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
-    let it = if it.ends_with('?') {
-        &it[..it.len() - 1]
-    } else {
-        it
-    };
+    let it = if it.starts_with('?') { &it[1..] } else { it };
 
-    if let "." | "?." = it {
+    if let "." = it {
         return (Priority::Path, Priority::Path);
     }
 
-    let it = if it.ends_with('.') {
-        &it[..it.len() - 1]
-    } else {
-        it
-    };
+    let it = if it.starts_with('.') { &it[1..] } else { it };
 
-    if it.ends_with("=>") {
+    if it.starts_with("=>") {
         return (Priority::Apply, Priority::Apply);
     }
-    if it.ends_with("<<") {
+    if it.starts_with("->") {
+        return (Priority::Apply, Priority::Apply);
+    }
+    if it.starts_with("<<") {
         return (Priority::BitShift, Priority::Add);
     }
-    if it.ends_with(">>") {
+    if it.starts_with(">>") {
         return (Priority::BitShift, Priority::Add);
     }
-    if it.ends_with("||") {
+    if it.starts_with("||") {
         return (Priority::BitOr, Priority::BitOr);
     }
-    if it.ends_with("&&") {
+    if it.starts_with("&&") {
         return (Priority::BitAnd, Priority::BitAnd);
     }
-    if it.ends_with("<-") {
+    if it.starts_with("<-") {
         return (Priority::And, Priority::And);
     }
-    if it.ends_with("<-|") {
-        return (Priority::And, Priority::And);
+    if it.starts_with("~~") {
+        return (Priority::BitNot, Priority::BitNot);
     }
-    if it.ends_with("..") {
+    if it.starts_with("^^") {
+        return (Priority::BitXor, Priority::BitXor);
+    }
+    if it.starts_with("..") {
         return (Priority::Apply, Priority::Path);
     }
-    if it.ends_with('.') {
+    if it.starts_with('.') {
         return (Priority::Range, Priority::Range);
     }
 
-    if it.contains("..") {
-        return (Priority::Range, Priority::Range);
+    if it.starts_with("**") {
+        return (Priority::Pow, Priority::Pow);
     }
-    if it.contains(['|', '&', '<', '>', '=', ':']) {
+
+    if it.starts_with(['|', '&', '<', '>', '=', ':']) {
         return (Priority::Pipe, Priority::Range);
     }
 
-    if it.ends_with("++") {
-        return (Priority::Apply, Priority::Path);
-    }
-    if it.ends_with("--") {
-        return (Priority::Apply, Priority::Path);
-    }
-    if it.ends_with("**") {
-        return (Priority::Pow, Priority::Pow);
-    }
-    if it.ends_with("~~") {
-        return (Priority::BitNot, Priority::BitNot);
-    }
-    if it.ends_with("^^") {
-        return (Priority::BitXor, Priority::BitXor);
-    }
-
-    if it.contains(['*', '/', '\\', '%']) {
+    if it.starts_with(['*', '/', '\\', '%']) {
         return (Priority::Mul, Priority::Pow);
     }
-    if it.contains(['+', '-']) {
+    if it.starts_with(['+', '-']) {
         return (Priority::Add, Priority::UnAdd);
     }
 
@@ -109,10 +92,12 @@ pub fn priority_of_keyword(it: &str) -> (Priority, Priority) {
     use Priority::*;
     match it {
         "and" | "then" | "for" | "match" | "while" | "not" => (And, And),
+        "when" => (And, Pipe),
         "or" | "else" => (Or, And),
         "return" | "yield" => (Apply, Or),
         "in" | "is" => (Pipe, Range),
-        "as" => (Apply, Apply),
+        "as" | "type" => (Apply, Apply),
+        "pub" | "priv" | "mut" => (Path, Path),
         _ => (Apply, Path),
     }
 }
@@ -128,9 +113,9 @@ impl Token {
             TokenType::Semicolon => (Close, Comma),
             TokenType::Sharp => (Path, Path),
             TokenType::Colon => (And, And),
-            TokenType::ColonEq => (And, Or),
+            TokenType::ColonEq => (And, And),
             TokenType::ColonColon => (Path, Path), // left though
-            TokenType::ColonColonEq => (And, Or),
+            TokenType::ColonColonEq => (And, And),
             TokenType::Symbol(_) => (Apply, Path),
             TokenType::Keyword(ref slice) => priority_of_keyword(&slice),
             TokenType::Argument(_) => (Apply, Path),

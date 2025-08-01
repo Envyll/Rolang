@@ -33,7 +33,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             }
             this.advance();
             push_fn! {is_not_empty2 = this.try_parse_semiatomic()}
-        } else if let (Priority::Apply, pr_right) = curr.priority() {
+        } else if let (Priority::Apply, _) = curr.priority() {
             let is_path = Rc::new(Cell::new(None));
             let is_path2 = is_path.clone();
 
@@ -41,7 +41,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 if is_path.get().is_some() {
                     this.parse_path_or_stop(this.expressions_len().prev().unwrap());
                 } else {
-                    this.parse_unary(ind, pr_right, Priority::Path);
+                    this.parse_unary(ind, Priority::Path);
                 };
             }
             is_path2.set(this.try_parse_atomic());
