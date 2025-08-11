@@ -78,16 +78,34 @@ fn unicode_escape_U() {
 
 #[test]
 fn unterminated_char() {
-    let TokenType::Character { errors, .. } = lex_one("a'a") else {
+    let TokenType::Character { errors, .. } = lex_one("a'.") else {
         panic!()
     };
     assert!(errors.contains(CharErrorFlags::UNCLOSED));
 }
 
 #[test]
-fn argument() {
-    let TokenType::Argument(value) = lex_one("'a") else {
+fn generic_seq() {
+    assert_eq!(lex("a'aa'aa'aaa@a"), [
+        TokenType::Symbol("a".into(), SymbolType::Default),
+        TokenType::Symbol("'aa".into(), SymbolType::Generic),
+        TokenType::Symbol("'aa".into(), SymbolType::Generic),
+        TokenType::Symbol("'aaa".into(), SymbolType::Generic),
+        TokenType::Symbol("@a".into(), SymbolType::Pointer),
+    ]);
+}
+
+#[test]
+fn lifetime() {
+    let TokenType::Lifetime = lex_one("`a") else {
         panic!()
     };
-    assert_eq!(value, "a");
+}
+
+#[test]
+fn generic() {
+    let TokenType::Symbol(value, SymbolType::Generic) = lex_one("'a") else {
+        panic!()
+    };
+    assert_eq!(value.as_str(), "'a");
 }

@@ -58,7 +58,7 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
                 }),
             };
         }
-        // go back one char when stick |||'] -> ||'|] , unlikely case
+        // go back one char when stick |||'] -> ||'|]
         if line.as_bytes()[*curr_num - 1] == b'|' {
             *curr_num -= 1;
             *curr_col -= 1;
@@ -84,6 +84,10 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
         "::" => ColonColon,
         ":=" => ColonEq,
         "::=" => ColonColonEq,
+        "." | "?." => {
+            it.prev_is_dot = true;
+            Operator
+        }
         _ => Operator,
     };
 

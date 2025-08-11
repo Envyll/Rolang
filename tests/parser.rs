@@ -37,12 +37,10 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                     f(&ast, args[i]);
                 }
             }
-            ASTExpr::Apply(root, ref args) => {
-                assert_eq!(len, 1 + args.len(), "fail at apply");
-                let mut fns = fns.into_iter();
-                fns.next().unwrap()(ast, root);
-                for (i, f) in fns.enumerate() {
-                    f(&ast, args[i]);
+            ASTExpr::Apply(ref args) => {
+                assert_eq!(len, args.len(), "fail at apply");
+                for (f, arg) in fns.into_iter().zip(args.iter()) {
+                    f(&ast, *arg);
                 }
             }
             ASTExpr::Unary(tok, expr) => {
@@ -64,7 +62,28 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                 for (i, f) in fns.into_iter().enumerate() {
                     f(&ast, exprs[i]);
                 }
-            }
+            },
+            ASTExpr::Flow(lhs, tok, mhs, ref rhs) => {
+                assert_eq!(len, rhs.len() + 1 + mhs.is_some() as usize, "fail at flow({})", &ast[tok].slice);
+                let mut fns = fns.into_iter();
+                fns.next().unwrap()(ast, lhs);
+                if let Some(mhs) = mhs {
+                    fns.next().unwrap()(ast, mhs);
+                }                
+                for (i, f) in fns.enumerate() {
+                    f(&ast, rhs[i]);
+                }
+            },
+            ASTExpr::UnFlow(tok, mhs, ref rhs) => {
+                assert_eq!(len, rhs.len() + mhs.is_some() as usize, "fail at un_flow({})", &ast[tok].slice);
+                let mut fns = fns.into_iter();
+                if let Some(mhs) = mhs {
+                    fns.next().unwrap()(ast, mhs);
+                }
+                for (i, f) in fns.enumerate() {
+                    f(&ast, rhs[i]);
+                }
+            },
         }
     }
 }
@@ -110,20 +129,44 @@ fn test_ops() {
 fn test_def() {
     test_parse(
         r#"
-        pub some_mod T type 
-        when 
+        pub some_mod T  
+        when: 
             T.Default
-        :=
+        type{} :=
             pub my_type type[priv T]~ :=
-            pub my_static := my_type::[[||]] mut@
+            pub my_static := my_type::[||] mut@
     "#,
-        test_nodes![[
-            [([[]] [] [])[
-                ([] [[]])
-            ]] [
-                [([[]] [([[[]]] [])]) []]
-                [[[]] ([[] [[]]] [[]])]
-            ]
-        ]],
+        test_nodes![
+            {
+                {{
+                    ([[]][])
+                    ([][[]])
+                }}
+                {{[[]] ([[[]]][])}}
+                {[[]] (([][]) [[]])}
+            }
+        ],
+    )
+}
+
+#[test]
+fn test_flow() {
+    test_parse("
+        [] for n:{
+            n
+        }
+        u for m:
+            m
+        a then x: {} then {}
+        a then then {}
+        a or or {} then {} or {}
+    ", 
+   test_nodes![
+       {[][][]}
+       {[][][]}
+       {{[][]}}
+       {[]{}}
+       {{{[]{}}}}
+    ]
     )
 }

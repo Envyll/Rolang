@@ -1,7 +1,7 @@
 use crate::lexer::TokenType::{Error, Keyword, Symbol};
 use crate::lexer::lex_char::lex_char;
 use crate::lexer::lex_string::lex_string;
-use crate::lexer::{State, Token, TokenIterator, is_keyword, skip_while_alnum};
+use crate::lexer::{State, Token, TokenIterator, is_keyword, skip_while_alnum, SymbolType};
 
 pub fn lex_symbol(it: &mut TokenIterator) -> Token {
     let Some(start @ State { num, col, char: _ }) = it.current else {
@@ -10,17 +10,19 @@ pub fn lex_symbol(it: &mut TokenIterator) -> Token {
     let row = it.row;
     let line = it.lines[row].clone();
 
-    let right_bound = |mb_state| {
-        if let Some(State {
-            num: curr_num @ 1..,
-            ..
-        }) = mb_state
-        {
-            curr_num
-        } else {
-            line.len()
-        }
-    };
+    macro_rules! slice_end {
+        () => {{
+            if let Some(State {
+                num: curr_num @ 1..,
+                ..
+            }) = it.current
+            {
+                curr_num
+            } else {
+                line.len()
+            }
+        }};
+    }
 
     it.next_char();
     skip_while_alnum(it);
@@ -36,15 +38,15 @@ pub fn lex_symbol(it: &mut TokenIterator) -> Token {
             it.next_char();
             skip_while_alnum(it);
 
-            let rbound: usize = right_bound(it.current);
+            let slice_end: usize = slice_end!();
 
-            let slice = line.slice(num..rbound);
-            let identifier = line.slice(sharp_num + 1..rbound);
+            let slice = line.slice(num..slice_end);
+            let identifier = line.slice(sharp_num + 1..slice_end);
             let prefix = &line[num..sharp_num];
             Token {
                 ty: match prefix {
                     "k" => Keyword(identifier),
-                    "r" => Symbol(identifier),
+                    "r" => Symbol(identifier, SymbolType::Default),
                     _ => Error,
                 },
                 slice,
@@ -54,12 +56,12 @@ pub fn lex_symbol(it: &mut TokenIterator) -> Token {
             }
         }
         _ => {
-            let slice = line.slice(num..right_bound(it.current));
+            let slice = line.slice(num..slice_end!());
             Token {
                 ty: if is_keyword(slice.as_str()) {
                     Keyword(slice.clone())
                 } else {
-                    Symbol(slice.clone())
+                    Symbol(slice.clone(), SymbolType::Default)
                 },
                 slice,
                 row,

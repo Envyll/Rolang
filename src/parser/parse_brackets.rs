@@ -14,7 +14,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let this = self;
 
         let Some(Token {
-            ty: TokenType::Open(br_ty),
+            ty: TokenType::Open(br_ty, _),
             ..
         }) = this.current()
         else {
@@ -45,14 +45,15 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             };
             // ( _<eof>_
             let Some(sep_tok) = this.current() else {
+                *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
                 *this /= ASTErr::Unclosed;
-                *this += ASTExpr::Braced(op_ind, exprs, cl_ind);
                 // end
                 return;
             };
-            // ( _;_
+            // ( _?_
             let TokenType::Close(br_ty_cl) = sep_tok.ty else {
-                this.advance();
+                // ( ;
+                if let TokenType::Semicolon = sep_tok.ty {this.advance()}
                 this.parse_br_member(br_ty, exprs, op_ind);
                 return;
             };
@@ -60,24 +61,32 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             if br_ty != br_ty_cl {
                 // ( _<dedent>_
                 if br_ty_cl == BracketType::Indent {
+                    *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
                     *this /= ASTErr::Unclosed;
-                    *this += ASTExpr::Braced(op_ind, exprs, cl_ind);
                     // end
                     return;
                 }
                 this.advance();
+                *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
                 *this /= ASTErr::Unopened;
-                *this += ASTExpr::Braced(op_ind, exprs, cl_ind);
                 // parse as there were no members yet
-                this.parse_br_member(br_ty, vec![], op_ind);
-                this.parse_binary(exprs_len, Priority::Comma);
+                this.parse_br_member(br_ty, vec![this.expressions_len().prev().unwrap()], op_ind);
                 return;
             };
             // ( _)_
             this.advance();
-            *this += ASTExpr::Braced(op_ind, exprs, cl_ind);
+            // (<indent> <dedent>)
+            'indented: {
+                let [expr] = exprs.as_slice() else {break 'indented};
+                let 1 = this.expressions_len().0 - expr.0 else {break 'indented};
+                let Some(exprs) = this.is_prev_indent_br() else {break 'indented};
+                *this.prev_expr_mut().unwrap() = ASTExpr::Braced(op_ind, exprs.clone(), cl_ind);
+                return;
+            };
+            *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
+            
             // end
         }
-        push_fn! {isnt_empty2 = this.try_parse_any(Priority::Comma)}
+        push_fn! {isnt_empty2 = this.try_parse_any(Priority::Comma, false)}
     }
 }

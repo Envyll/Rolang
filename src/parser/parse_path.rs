@@ -1,4 +1,4 @@
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{ Token, TokenType};
 use crate::parser::parser_state::ParserState;
 use crate::parser::{ASTErr, ASTExpr, ExprInd};
 use crate::push_fn;
@@ -21,14 +21,16 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn try_parse_atomic(&mut self) -> Option<()> {
         let this = self;
         use TokenType::*;
-        if matches!(this.current().unwrap().ty, |Open(_)| Symbol(_)
-            | Argument(_)
+        let ty = &this.current().unwrap().ty;
+        if matches!(ty, 
+            Open(_, _)
+            | Symbol(..)
             | Number { .. }
             | String { .. }
             | Character { .. })
-            || matches!(this.current().unwrap().ty,
-                | Keyword(ref n) if n == "_"
-            )
+            || matches!(ty,
+                | Keyword(n) if n == "_"
+            ) 
         {
             push_fn! {this =>
                 if this.try_parse_brackets().is_none() {
@@ -47,8 +49,8 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let this = self;
         this.try_parse_atomic().unwrap_or_else(|| {
             push_fn! {this =>
-                *this /= ASTErr::NotAtomic;
                 *this += ASTExpr::Empty;
+                *this /= ASTErr::NotAtomic;
             }
         })
     }
@@ -64,7 +66,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             }
             this.parse_atomic();
         } else {
-            *this += ASTExpr::Path(left, frags);
+            *this += ASTExpr::Path(left, frags.into());
         }
     }
 }

@@ -1,5 +1,3 @@
-extern crate core;
-
 use imstr::string::ImString;
 use std::rc::Rc;
 

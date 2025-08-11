@@ -1,4 +1,4 @@
-use crate::parser::{AST, ASTErr, ASTExpr, ExprInd};
+use crate::parser::{ASTExpr, ExprInd, AST};
 
 pub fn visualize_ast_full(ast: &AST) -> String {
     let mut output = String::new();
@@ -34,7 +34,7 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
     };
     if let Some(errs) = ast.errors.get(&expr) {
         for err in errs {
-            *out += &format!("{indent}⚠️  Error: {}\n", format_ast_error(err));
+            *out += &format!("{indent}⚠️  Error: {}\n", err);
         }
     }
     match ast[expr] {
@@ -53,11 +53,9 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
             out.push_str(&format!("{indent}UnaryOp: {op:?}\n"));
             visualize_expr(&ast, expr, depth + 1, out);
         }
-        ASTExpr::Apply(func, ref args) => {
+        ASTExpr::Apply(ref args) => {
             out.push_str(&format!("{indent}Apply:\n"));
-            visualize_expr(&ast, func, depth + 1, out);
-            out.push_str(&format!("{indent}Args:\n"));
-            for &arg in args {
+            for &arg in args.iter() {
                 visualize_expr(&ast, arg, depth + 1, out);
             }
         }
@@ -68,7 +66,7 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
             out.push_str(&format!("{indent}Root: \n"));
             visualize_expr(&ast, root, depth + 1, out);
             out.push_str(&format!("{indent}Path: \n"));
-            for &expr in next {
+            for &expr in next.iter() {
                 visualize_expr(&ast, expr, depth + 1, out);
             }
         }
@@ -76,7 +74,32 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
             let op = &ast.tokens[op.0].slice;
             let cl = &ast.tokens[cl.0].slice;
             out.push_str(&format!("{indent}Braced: {op:?}, {cl:?}\n"));
-            for &expr in mid {
+            for &expr in mid.iter() {
+                visualize_expr(&ast, expr, depth + 1, out);
+            }
+        }
+        ASTExpr::Flow(lhs, op, mhs, ref rhs) => {
+            let op = &ast[op].slice;
+            out.push_str(&format!("{indent}Flow: {op:?}\n"));
+            visualize_expr(&ast, lhs, depth + 1, out);
+            if let Some(mhs) = mhs {
+                out.push_str(&format!("{indent}Gets: \n"));
+                visualize_expr(&ast, mhs, depth + 1, out);
+            }
+            out.push_str(&format!("{indent}And then: \n"));
+            for &expr in rhs.iter() {
+                visualize_expr(&ast, expr, depth + 1, out);
+            }
+        }
+        ASTExpr::UnFlow(op, mhs, ref rhs) => {
+            let op = &ast[op].slice;
+            out.push_str(&format!("{indent}Flow: {op:?}\n"));
+            if let Some(mhs) = mhs {
+                out.push_str(&format!("{indent}Gets: \n"));
+                visualize_expr(&ast, mhs, depth + 1, out);
+            }
+            out.push_str(&format!("{indent}And then: \n"));
+            for &expr in rhs.iter() {
                 visualize_expr(&ast, expr, depth + 1, out);
             }
         }
@@ -84,13 +107,5 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
         ref other => {
             out.push_str(&format!("{indent}{other:?} (not implemented)\n"));
         }
-    }
-}
-
-fn format_ast_error(err: &ASTErr) -> String {
-    match err {
-        ASTErr::Unopened => "Unopened".to_string(),
-        ASTErr::Unclosed => "Unclosed".to_string(),
-        ASTErr::NotAtomic => "Not Atomic".to_string(),
     }
 }

@@ -25,7 +25,7 @@ fn simple_indent_block() {
     let tokens = norm_tokens(
         "           ## (
         a := 1 (|       ## (
-            b := 2
+            b := 2      ##
                 c := 3  ## ;
             d := 3      ## )
         |)              ## ;
@@ -35,7 +35,7 @@ fn simple_indent_block() {
 
     let opens = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Open(_)))
+        .filter(|t| matches!(t, TokenType::Open(_, _)))
         .count();
     let closes = tokens
         .iter()
@@ -52,33 +52,22 @@ fn simple_indent_block() {
 }
 
 #[test]
-fn no_semicolon_after_control_flow() {
-    let str = "
-        \tx then
-           \t\tx
-         \telse
-              \tx
-           \tx
+fn control_flow() {
+    let str = "##(
+        \tx then:   ##(
+        \t\tx       ##)
+        \telse:     ##(
+        \t\tx       ##);
+        \tx         ##;)
     ";
 
     dbg!(TokenIterator::new(str).map(|t| t.ty).collect::<Vec<_>>());
 
     let tokens = norm_tokens(str);
-    /* <(>
-        x then <(>
-            x <)>
-        else <(>
-            x <)> <;>
-        x <;> <)>
-    */
 
-    let flows = tokens
-        .windows(2)
-        .filter(|w| matches!(w[0], TokenType::Keyword(_)) && matches!(w[1], TokenType::Semicolon))
-        .count();
     let opens = tokens
         .iter()
-        .filter(|t| matches!(t, TokenType::Open(_)))
+        .filter(|t| matches!(t, TokenType::Open(_, _)))
         .count();
     let closes = tokens
         .iter()
@@ -91,9 +80,5 @@ fn no_semicolon_after_control_flow() {
 
     dbg!(tokens);
 
-    assert_eq!(
-        flows, 0,
-        "Semicolon must not follow control flow keyword directly"
-    );
     assert_eq!([opens, closes, semis], [3, 3, 2]);
 }

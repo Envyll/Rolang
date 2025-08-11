@@ -8,11 +8,11 @@ use std::rc::Rc;
 
 impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn parse_apply(&mut self, left: ExprInd) {
-        self.parse_apply_step(left, vec![], true);
+        self.parse_apply_step(vec![left], true);
     }
 
     pub fn parse_apply_or_stop(&mut self, left: ExprInd) {
-        self.parse_apply_step(left, vec![], false);
+        self.parse_apply_step(vec![left], false);
     }
 
     pub fn try_parse_semiatomic(&mut self) -> Option<()> {
@@ -41,7 +41,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 if is_path.get().is_some() {
                     this.parse_path_or_stop(this.expressions_len().prev().unwrap());
                 } else {
-                    this.parse_unary(ind, Priority::Path);
+                    this.parse_unary(ind, Priority::Path,);
                 };
             }
             is_path2.set(this.try_parse_atomic());
@@ -60,7 +60,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         }
     }
 
-    fn parse_apply_step(&mut self, left: ExprInd, mut frags: Vec<ExprInd>, allow_empty: bool) {
+    fn parse_apply_step(&mut self, mut frags: Vec<ExprInd>, allow_empty: bool) {
         let this = self;
 
         let is_left = Rc::new(Cell::default());
@@ -69,9 +69,9 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         push_fn! {this =>
             if let Some(()) = is_left.get() {
                 frags.push(this.expressions_len().prev().unwrap());
-                this.parse_apply_step(left, frags, true);
+                this.parse_apply_step(frags, true);
             } else if allow_empty {
-                *this += ASTExpr::Apply(left, frags);
+                *this += ASTExpr::Apply(frags.into());
             };
         }
         is_left2.set(this.try_parse_semiatomic());

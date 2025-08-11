@@ -3,6 +3,7 @@ use crate::lexer::lex::is_alnum;
 use crate::lexer::{NumberErrorFlags, State, Token, TokenIterator, skip_while_alnum};
 
 pub fn lex_number(it: &mut TokenIterator) -> Token {
+    
     let Some(State {
         num: start_num,
         col: start_col,

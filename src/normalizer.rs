@@ -1,6 +1,7 @@
 use crate::ImStr;
-use crate::lexer::{BracketType, Lines, Token, TokenIterator, TokenType};
+use crate::lexer::{BracketType, Lines, SymbolType, Token, TokenIterator, TokenType};
 use std::mem;
+use crate::parser::priority::Priority;
 
 #[derive(Debug, Clone)]
 pub struct NormalizedTokenIterator {
@@ -63,7 +64,7 @@ impl Iterator for NormalizedTokenIterator {
                         row,
                         col: 0,
                         num: 0,
-                        ty: TokenType::Open(BracketType::Indent),
+                        ty: TokenType::Open(BracketType::Indent, SymbolType::Default),
                     })
                 }
                 Some(Token {
@@ -160,11 +161,10 @@ fn is_prev_good_for_indent_or_dedent(tok: &Option<Token>) -> bool {
     }
 }
 
-fn is_next_good_for_semicolon(Token { ty, slice, .. }: &Token) -> bool {
+fn is_next_good_for_semicolon(Token { ty, .. }: &Token) -> bool {
     match ty {
         TokenType::Close(_)
-        | TokenType::Symbol(_)
-        | TokenType::Argument(_)
+        | TokenType::Symbol(..)
         | TokenType::Number { .. }
         | TokenType::String { .. }
         | TokenType::Character { .. }
@@ -172,58 +172,30 @@ fn is_next_good_for_semicolon(Token { ty, slice, .. }: &Token) -> bool {
         | TokenType::Colon
         | TokenType::ColonEq
         | TokenType::ColonColonEq => true,
-        TokenType::Operator => match slice.as_str() {
-            // mb add some extra conditions?
-            _ => true,
-        },
         _ => false,
     }
 }
 
 fn is_prev_good_for_semicolon(tok: &Option<Token>) -> bool {
-    let Some(Token { ty, slice, .. }) = tok else {
+    let Some(tok @ Token { ty, .. }) = tok else {
         return false;
     };
     match ty {
         TokenType::Semicolon
         | TokenType::Comma
-        | TokenType::Close(_)
-        | TokenType::Indent(_)
-        | TokenType::Colon
-        | TokenType::ColonColon
-        | TokenType::ColonEq
-        | TokenType::ColonColonEq => false,
-        TokenType::Operator => !is_exch(&slice),
-        TokenType::Keyword(slice) => !is_flow(&slice),
+        | TokenType::Indent(_) => false,
+        _ if tok.priority().0 <= Priority::And => false,
         _ => true,
     }
 }
 
-fn is_next_good_for_indent(Token { ty, slice, .. }: &Token) -> bool {
+fn is_next_good_for_indent(Token { ty, .. }: &Token) -> bool {
     match ty {
-        TokenType::Open(_)
+        TokenType::Open(_, _)
         | TokenType::Colon
-        | TokenType::ColonColon
         | TokenType::ColonEq
         | TokenType::ColonColonEq => true,
-        TokenType::Operator => is_exch(&slice),
-        TokenType::Keyword(slice) => is_flow(&slice),
         _ => false,
     }
 }
 
-#[inline]
-fn is_flow(str: &str) -> bool {
-    matches!(str, |"then"| "else"
-        | "or"
-        | "and"
-        | "match"
-        | "for"
-        | "while"
-        | "when")
-}
-
-#[inline]
-fn is_exch(str: &str) -> bool {
-    str.starts_with("<-")
-}

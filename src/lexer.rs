@@ -10,7 +10,8 @@ mod lex_number;
 mod lex_operator;
 mod lex_string;
 mod lex_symbol;
-
+pub mod token_traits;
+mod lex_open;
 // mb migrate to &str instead of ImStr??
 
 #[derive(Debug, Clone)]
@@ -28,19 +29,18 @@ pub struct Token {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenType {
-    Open(BracketType),
+    Open(BracketType, SymbolType),
     Close(BracketType),
     Operator,
     Comma,
     Semicolon,
-    Sharp,
     Colon,
     ColonEq,
     ColonColon,
     ColonColonEq,
-    Symbol(ImStr),
+    Symbol(ImStr, SymbolType),
+    Lifetime,
     Keyword(ImStr),
-    Argument(ImStr),
     Character {
         value: char,
         prefix_len: usize,
@@ -71,6 +71,7 @@ pub struct TokenIterator {
     row: usize,
     iter: Enumerate<imstr::string::CharIndices<ImStrData>>,
     current: Option<State>,
+    prev_is_dot: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -105,6 +106,21 @@ pub enum BracketType {
     NonAscii { with_stick: bool },
 }
 
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq,)]
+pub enum SymbolType{
+    /// `a` `()`
+    Default,
+    /// `'a` `'()`
+    Generic,
+    /// `@a` `@()` 
+    Pointer,
+    /// `$a` `$()`
+    Borrow,
+    /// `#a` `#()`
+    Attribute,
+}
+
 pub fn is_keyword(str: &str) -> bool {
     matches!(
         str,
@@ -116,9 +132,9 @@ pub fn is_keyword(str: &str) -> bool {
             | "for"
             | "in"
             | "is"
-            | "match"
             | "mut"
             | "not"
+            | "null"
             | "or"
             | "priv"
             | "pub"

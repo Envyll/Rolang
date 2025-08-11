@@ -1,5 +1,7 @@
+use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
 use crate::lexer::lex::{is_alnum, skip_while_alnum};
-use crate::lexer::{CharErrorFlags, State, Token, TokenIterator, TokenType};
+use crate::lexer::{CharErrorFlags, State, SymbolType, Token, TokenIterator, TokenType};
+use crate::lexer::lex_open::lex_open;
 
 pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
     let row = it.row;
@@ -17,6 +19,33 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
     };
 
     let prefix_len = quo_num - num;
+    let it_clone = it.clone();
+    macro_rules! undo {
+        () => {{
+            *it = it_clone;
+            let slice = line.slice(start.num..quo_num);
+            Token{
+                ty: TokenType::Symbol(slice.clone(), SymbolType::Default),
+                slice,
+                row,
+                col,
+                num,
+            }
+        }}
+    }
+    macro_rules! slice_end {
+        () => {{
+            if let Some(State {
+                num: slice_end @ 1..,
+                ..
+            }) = it.current
+            {
+                slice_end
+            } else {
+                line.len()
+            }
+        }};
+    }
 
     it.next_char();
 
@@ -58,15 +87,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
                 it.next_char();
                 skip_while_alnum(it);
 
-                let slice_end = if let Some(State {
-                    num: slice_end @ 1..,
-                    ..
-                }) = it.current
-                {
-                    slice_end
-                } else {
-                    line.len()
-                };
+                let slice_end = slice_end!();
 
                 let (value, flags) = parse_esc(&line[fst_num + 1..suff_num_m1]);
 
@@ -84,15 +105,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
                 }
             // …'\…
             } else {
-                let slice_end = if let Some(State {
-                    num: slice_end @ 1..,
-                    ..
-                }) = it.current
-                {
-                    slice_end
-                } else {
-                    line.len()
-                };
+                let slice_end = slice_end!();
 
                 Token {
                     slice: line.slice(num..slice_end),
@@ -126,16 +139,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
             };
 
             skip_while_alnum(it);
-
-            let slice_end = if let Some(State {
-                num: slice_end @ 1..,
-                ..
-            }) = it.current
-            {
-                slice_end
-            } else {
-                line.len()
-            };
+            let slice_end = slice_end!();
 
             Token {
                 slice: line.slice(num..slice_end),
@@ -154,7 +158,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
                 },
             }
         }
-        // …'_'…
+        // …'A'…
         (
             _,
             true,
@@ -166,16 +170,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
         ) if suff_num_m1 == fst_num + fst_char.len_utf8() => {
             it.next_char();
             skip_while_alnum(it);
-
-            let slice_end = if let Some(State {
-                num: slice_end @ 1..,
-                ..
-            }) = it.current
-            {
-                slice_end
-            } else {
-                line.len()
-            };
+            let slice_end = slice_end!();
 
             Token {
                 slice: line.slice(num..slice_end),
@@ -190,35 +185,23 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
                 },
             }
         }
-        // …'…
-        (_, true, _) => {
-            let slice_end = if let Some(State {
-                num: slice_end @ 1..,
-                ..
-            }) = it.current
-            {
-                slice_end
-            } else {
-                line.len()
-            };
-
-            Token {
-                slice: line.slice(num..slice_end),
+        // '…
+        (_, true, _) if prefix_len == 0  => {
+            let slice_end = slice_end!();
+            let slice = line.slice(num..slice_end);
+            Token{
+                ty: TokenType::Symbol(slice.clone(), SymbolType::Generic),
+                slice,
                 row,
                 col,
                 num,
-                ty: if prefix_len == 0 {
-                    TokenType::Argument(line.slice(fst_num..slice_end))
-                } else {
-                    TokenType::Character {
-                        value: fst_char,
-                        prefix_len,
-                        suffix_len: slice_end - fst_num,
-                        errors: CharErrorFlags::UNCLOSED,
-                    }
-                },
             }
         }
+        // …'…
+        (_, true, _) => {
+            undo!()
+        },
+
         _ => {
             it.next_char();
 
@@ -231,16 +214,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
             {
                 it.next_char();
                 skip_while_alnum(it);
-
-                let slice_end = if let Some(State {
-                    num: slice_end @ 1..,
-                    ..
-                }) = it.current
-                {
-                    slice_end
-                } else {
-                    line.len()
-                };
+                let slice_end = slice_end!();
 
                 Token {
                     slice: line.slice(num..slice_end),
@@ -256,17 +230,29 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
                 }
             // …'.
             } else {
-                Token {
-                    slice: line.slice(num..fst_num + 1),
-                    row,
-                    col,
-                    num,
-                    ty: TokenType::Character {
-                        value: '\'',
-                        prefix_len,
-                        suffix_len: 0,
-                        errors: CharErrorFlags::UNCLOSED,
-                    },
+                // …'(
+                if let GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation
+                    = fst_char.general_category() {
+                    if prefix_len == 0 {
+                        undo!();
+                        it.next_char();
+                        lex_open(it, start, SymbolType::Generic)
+                    } else {
+                        undo!()
+                    }
+                } else {
+                    Token {
+                        slice: line.slice(num..fst_num + 1),
+                        row,
+                        col,
+                        num,
+                        ty: TokenType::Character {
+                            value: '\'',
+                            prefix_len,
+                            suffix_len: 0,
+                            errors: CharErrorFlags::UNCLOSED,
+                        },
+                    }
                 }
             }
         }

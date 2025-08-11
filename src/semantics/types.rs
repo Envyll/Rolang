@@ -1,107 +1,74 @@
+use crate::semantics::constants_values::ConstantValue;
+use crate::semantics::modules::ModuleInd;
 use crate::ImStr;
-use crate::parser::TokenInd;
 use im::{HashMap, HashSet, Vector};
+use std::fmt::Debug;
 use std::rc::Rc;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Type {
-    No,
-    /// `s64`
-    Type,
-    /// `(0s64 const)`
-    Constant(Constant),
-    /// `mod (def1 := …; …)`
-    Module(/*todo*/),
-    /// `dyn`
-    Dyn(/*todo*/),
-    /// `(Box::default)^`
-    Undefined(/*todo*/),
-    Lifetime(Lifetime),
-
-    /// `3u32`
+    /// Value example: `3`\
+    /// Type example: `i64`
     Integer {
         size: u32,
         signed: Option<bool>,
     },
-    /// `3f32`
+    /// Value example: `3f32`\
+    /// Type example: `f32`
     Float(FPType),
-    /// `(t: t)`
+    /// Value example: `((t1 as u32) (t2 as u32) (t3 as u32) as u32: t1 + t2 * t3)`\
+    /// Type example: `fn u32 => [t1: u32].fn u32 => [t1: u32].[t2: u32].fn u32 => u32`
     Function {
-        return_type: Rc<Type>,
-        params: Vector<Type>,
-        realized: usize,
+        base: Option<Rc<Type>>,
+        arg: Rc<Type>,
+        ty: Rc<Type>,
     },
-    /// `type::[Type1; Type2; …; id1: IdType1; id2: IdType2; …]`
-    Tuple(Vector<Type>, HashMap<ImStr, Type>),
-    /// `Arr::[]`
+    /// Value example: `Base::[].[Type1::[]; Type2::[]; id1: IdType1::[]; id2: IdType2::[];]`\
+    /// Type example: `Base.[Type1; Type2; id1: IdType1; id2: IdType2;]`
+    Tuple(Option<Rc<Type>>, Vector<Rc<Type>>, HashMap<ImStr, Type>),
+    /// Value example: `Arr::[1; 2]`\
+    /// Type example: `Arr[2] => i64`
     Array(Rc<Type>, Option<u64>),
-    /// `type …`
-    Struct(StructType, Module),
-    /// `u32 || []` — union types
-    Either(HashSet<Type>),
-    /// `1 'a::@@` — reference to any value
+    /// Union type\
+    /// Value example: `[] .either`\
+    /// Type example: `Either || u32 || []`
+    Either(HashSet<Rc<Type>>),
+    /// Reference to any value\
+    /// Value example: `1 mut@`\
+    /// Type example: `mut@ => i64`
     Ref {
         ty: Rc<Type>,
-        mutability: Option<bool>,
+        mutability: bool,
         lifetime: Lifetime,
+        allocator: Option<Rc<Type>>,
     },
-    /// `"abc" .box copy` — lifetimed copy of any value
+    /// Lifetimed copy\
+    /// Value example: `"abc" @'box const~`\
+    /// Type example: `const~ => 'box@ => Str`
     Copy {
         ty: Rc<Type>,
+        mutability: bool,
         lifetime: Lifetime,
     },
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum StructType {
-    /// `type`
-    Single,
-    /// `type::[Type1; Type2; …; id1: IdType1; id2: IdType2; …]`
-    Tuple(Vector<Type>, HashMap<ImStr, Type>),
-    /// `type::(opt1; opt2; …)`
-    Enum(Vector<StructType>),
-    /// `type::id par1 par2 …`
-    Function {
-        name: ImStr,
-        args: Vector<Type>,
-        realized: usize,
-    },
-    /// `super.type::opt `(`=> super_opt`)?
-    Class {
-        parent: Rc<Type>,
-        fields: HashMap<ImStr, Type>,
-        hidden_fields: Vector<Type>,
-    },
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DefPlace {
-    pub ind: TokenInd,
-    pub file: ImStr,
-    pub project: ImStr,
+    Generic(ImStr, TypeTraits),
+    Struct {ty: ModuleInd, params: HashMap<ImStr, ConstantValue>},
+    Type
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Lifetime {
-    DefPlace(DefPlace),
+    Local(u32),
     Static,
     Unsafe,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Module {
-    pub depends_on: HashMap<ImStr, Type>,
-    /// None if anonymous (tuple, object)
-    pub def_place: Option<DefPlace>,
-    pub constants: HashMap<ImStr, Constant>,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum FPType {
-    //todo
+    F16, BF16, F32, F64, F128,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Constant {
+pub struct TypeTraits{
+    copy_borrowable: Option<bool>,
     //todo
 }

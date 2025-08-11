@@ -91,13 +91,12 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
 pub fn priority_of_keyword(it: &str) -> (Priority, Priority) {
     use Priority::*;
     match it {
-        "and" | "then" | "for" | "match" | "while" | "not" => (And, And),
-        "when" => (And, Pipe),
+        "and" | "then" | "for" | "when" | "while" | "type" => (And, And),
         "or" | "else" => (Or, And),
-        "return" | "yield" => (Apply, Or),
+        "return" | "yield" | "not" => (Apply, And),
         "in" | "is" => (Pipe, Range),
-        "as" | "type" => (Apply, Apply),
-        "pub" | "priv" | "mut" => (Path, Path),
+        "as" => (Apply, Apply),
+        "pub" | "priv" | "mut" | "const" => (Path, Path),
         _ => (Apply, Path),
     }
 }
@@ -106,24 +105,32 @@ impl Token {
     pub fn priority(&self) -> (Priority, Priority) {
         use Priority::*;
         match self.ty {
-            TokenType::Open(_) => (Apply, Comma),
+            TokenType::Open(_, _) => (Apply, Comma),
             TokenType::Close(_) => (Close, Path),
             TokenType::Operator => priority_of_operator(&self.slice),
             TokenType::Comma => (Comma, Comma),
             TokenType::Semicolon => (Close, Comma),
-            TokenType::Sharp => (Path, Path),
             TokenType::Colon => (And, And),
-            TokenType::ColonEq => (And, And),
+            TokenType::ColonEq => (Or, And),
+            TokenType::ColonColonEq => (Or, And),
             TokenType::ColonColon => (Path, Path), // left though
-            TokenType::ColonColonEq => (And, And),
-            TokenType::Symbol(_) => (Apply, Path),
             TokenType::Keyword(ref slice) => priority_of_keyword(&slice),
-            TokenType::Argument(_) => (Apply, Path),
+            TokenType::Symbol(_, _) => (Apply, Path),
             TokenType::Character { .. } => (Apply, Path),
             TokenType::String { .. } => (Apply, Path),
             TokenType::Number { .. } => (Apply, Path),
             TokenType::Indent(_) => unreachable!(),
             TokenType::Error => (Apply, Path),
+            TokenType::Lifetime => (Path, Path),
         }
+    }
+    
+    pub fn is_flow_kw(&self) -> bool {
+        matches!(self.ty, TokenType::Keyword(ref x) if matches!(x.as_str(),
+            "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else"
+        ))
+    }
+    pub fn is_flow_op(&self) -> bool {
+        matches!(self.ty, TokenType::Colon | TokenType::ColonColonEq | TokenType::ColonEq)
     }
 }

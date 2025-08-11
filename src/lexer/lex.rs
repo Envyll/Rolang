@@ -5,8 +5,9 @@ use crate::lexer::lex_number::lex_number;
 use crate::lexer::lex_operator::lex_operator;
 use crate::lexer::lex_string::lex_string;
 use crate::lexer::lex_symbol::lex_symbol;
-use crate::lexer::{BracketType, Lines, State, Token, TokenIterator};
+use crate::lexer::{ Lines, State, SymbolType, Token, TokenIterator, };
 use unicode_properties::*;
+use crate::lexer::lex_open::lex_open;
 
 impl TokenIterator {
     pub fn new(str: &str) -> Self {
@@ -38,10 +39,12 @@ impl TokenIterator {
                 col: 0,
                 char: ' ',
             }),
+            prev_is_dot: false,
         }
     }
 
     pub(super) fn next_char(&mut self) -> &mut Self {
+        self.prev_is_dot = false;
         loop {
             if let Some((col, (num, char))) = self.iter.next() {
                 self.current = Some(State { num, col, char });
@@ -58,6 +61,7 @@ impl TokenIterator {
     }
 
     pub(super) fn next_line(&mut self) -> &mut Self {
+        self.prev_is_dot = false;
         loop {
             if self.row + 1 == self.lines.len() {
                 self.current = None;
@@ -90,111 +94,122 @@ impl Iterator for TokenIterator {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        'all: loop {
+        Some('all: loop {
+            
             let start @ State { num, col, char } = self.current?;
             let row = self.row;
+            
+            macro_rules! slice_end {
+                () => {
+                    self.current
+                        .map(|s| s.num)
+                        .take_if(|s| *s > 0)
+                        .unwrap_or(self.lines[row].len())
+                };
+            }
 
             if num == 0 {
                 return lex_indent(self);
             }
 
-            break 'all match (char, char.general_category(), char.general_category_group()) {
-                (' ' | '\t', _, _) => {
+            break 'all match (char, char.general_category()) {
+                (' ' | '\t', _) => {
                     skip_whitespaces_and_get_len(self);
                     continue 'all;
                 }
-                ('_', ..) | (_, _, GeneralCategoryGroup::Letter) => Some(lex_symbol(self)),
-                ('"', ..) => Some(lex_string(self, start)),
-                ('\'', ..) => Some(lex_char(self, start)),
+                ('"', ..) => lex_string(self, start),
+                ('\'', ..) => lex_char(self, start),
 
-                ('#', ..) => {
+                ('#' | '@' | '$', ..) => {
                     self.next_char();
-                    if let Some(State { char: '#', .. }) = self.current {
-                        self.next_line();
-                        continue 'all;
-                    } else {
-                        Some(Token {
-                            slice: '#'.into(),
-                            row,
-                            col,
-                            num,
-                            ty: Sharp,
-                        })
+                    
+                    let s_ty = match char {
+                        '#' if self.current.is_some_and(|c| c.char == '#') => {
+                            self.next_line();
+                            continue 'all;
+                        },
+                        '#' => SymbolType::Attribute, 
+                        '@' => SymbolType::Pointer,
+                        '$' => SymbolType::Borrow,
+                        _ => unreachable!(),
+                    };
+
+                    if let Some(GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation)
+                    = (|| Some(self.current?.char.general_category()))() {
+                        return Some(lex_open(self, start, s_ty));
+                    };
+                    skip_while_alnum(self);
+                    let slice = self.lines[row]
+                        .slice(num..slice_end!());
+                    Token {
+                        ty: Symbol(
+                            slice.clone(),
+                            s_ty
+                        ),
+                        slice, 
+                        row, 
+                        col, 
+                        num, 
                     }
                 }
-                ('0'..='9', ..) => Some(lex_number(self)),
+                ('`', ..) => {
+                    self.next_char();
+                    skip_while_alnum(self);
+                    let slice = self.lines[row]
+                        .slice(num..slice_end!());
+                    Token {
+                        ty: Lifetime,
+                        slice, 
+                        row, 
+                        col, 
+                        num, 
+                    }
+                }
+                ('0'..='9', ..) if !self.prev_is_dot => lex_number(self),
                 (',', ..) => {
                     self.next_char();
-                    Some(Token {
+                    Token {
                         slice: ','.into(),
                         row,
                         col,
                         num,
                         ty: Comma,
-                    })
+                    }
                 }
                 (';', ..) => {
                     self.next_char();
-                    Some(Token {
+                    Token {
                         slice: ';'.into(),
                         row,
                         col,
                         num,
                         ty: Semicolon,
-                    })
+                    }
                 }
                 // ( [ { …
                 (
                     _,
                     GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation,
-                    GeneralCategoryGroup::Punctuation,
-                ) => {
-                    self.next_char();
-                    let with_stick = if let Some(State {
-                        num: 1..,
-                        char: '|',
-                        ..
-                    }) = self.current
-                    {
-                        self.next_char();
-                        true
-                    } else {
-                        false
-                    };
-
-                    let ty = Open(match char {
-                        '(' => BracketType::Round { with_stick },
-                        '[' => BracketType::Square { with_stick },
-                        '{' => BracketType::Curly { with_stick },
-                        _ => BracketType::NonAscii { with_stick },
-                    });
-
-                    let slice =
-                        self.lines[row].slice(num..num + char.len_utf8() + with_stick as usize);
-
-                    Some(Token {
-                        slice,
-                        row,
-                        col,
-                        num,
-                        ty,
-                    })
-                }
-                (_, _, GeneralCategoryGroup::Punctuation | GeneralCategoryGroup::Symbol) => {
-                    Some(lex_operator(self))
-                }
+                ) => lex_open(self, start, SymbolType::Default),
+                // ) ] } …
+                (
+                    _,
+                    GeneralCategory::ClosePunctuation | GeneralCategory::FinalPunctuation,
+                ) => lex_operator(self),
+                _ if is_op(char) => lex_operator(self),
+                _ if is_alnum(char) => lex_symbol(self),
                 _ => {
                     self.next_char();
-                    Some(Token {
+                    Token {
                         slice: char.into(),
                         row,
                         col,
                         num,
                         ty: Error,
-                    })
+                    }
                 }
             };
-        }
+        })
     }
 }
 
@@ -226,13 +241,12 @@ pub(super) fn skip_while(mut f: impl FnMut(char) -> bool, it: &mut TokenIterator
 }
 
 pub(super) fn is_alnum(char: char) -> bool {
-    char == '_'
-        || matches!(
-            char.general_category_group(),
-            GeneralCategoryGroup::Letter
-                | GeneralCategoryGroup::Number
-                | GeneralCategoryGroup::Mark
-        )
+    char == '_' || matches!(
+        char.general_category_group(),
+        GeneralCategoryGroup::Letter
+            | GeneralCategoryGroup::Number
+            | GeneralCategoryGroup::Mark
+    )
 }
 
 #[inline]
@@ -241,7 +255,7 @@ pub(super) fn skip_while_alnum(it: &mut TokenIterator) {
 }
 
 pub(super) fn is_op(char: char) -> bool {
-    !matches!(char, |';'| ',' | '#' | '\'' | '"' | '_')
+    !matches!(char, |';'| ',' | '#' | '@' | '$' | '`' | '\'' | '"' | '_')
         && matches!(
             char.general_category_group(),
             GeneralCategoryGroup::Punctuation | GeneralCategoryGroup::Symbol
