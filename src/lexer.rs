@@ -3,6 +3,7 @@ use crate::{ImStr, ImStrData};
 use bitflags::bitflags;
 use std::iter::Enumerate;
 use std::ops::Range;
+use crate::lexer::TokenType::{Keyword, Symbol};
 
 mod lex;
 mod lex_char;
@@ -181,4 +182,13 @@ bitflags! {
 
 pub trait Lines {
     fn lines(&self) -> &[ImStr];
+}
+
+impl Token {
+    pub fn slice_or_name(&self) -> &ImStr {
+        match &self.ty {
+            Keyword(str) | Symbol(str, _) => str,
+            _ => &self.slice
+        }
+    }
 }

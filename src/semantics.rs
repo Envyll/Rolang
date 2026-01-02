@@ -1,36 +1,64 @@
-pub mod types;
-mod modules_analyze;
-mod modules;
-mod constants_values;
-
-use crate::ImStr;
 use std::collections::HashMap;
+use derivative::Derivative;
+use crate::ImStr;
 use crate::parser::{ExprInd, AST};
-use crate::semantics::modules::{ModulesTable};
 
-pub enum SemanticError {}
+pub mod types;
+mod analyze;
 
-pub struct SemanticContext {
-    pub symbols_table: SymbolsTable,
-    pub expr_types: HashMap<Place, types::Type>,
-    pub errors: HashMap<Place, SemanticError>,
-    pub modules: ModulesTable,
-}
-
-pub struct SymbolsTable(pub Vec<HashMap<ImStr, Symbol>>);
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Symbol {
-    pub ty: types::Type,
-    pub place: Place,
-    //todo
+#[derive(Debug, Clone)]
+pub struct AnalyzedAST {
+    pub ast: AST,
+    
+    pub functions: HashMap<ImStr, FunctionDefinition>,
+    pub errors: Vec<AnalyzeErr>,
+    pub references: Vec<VariableDefinition>,
 }
 
 #[derive(Debug, Clone, Default)]
-struct FileTree(HashMap<Vec<ImStr>, AST>);
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Place{
-    pub file: Vec<ImStr>,
-    pub expr: ExprInd
+struct AnalyzerContext {
+    pub variables: Vec<VariablesContext>,
+    pub functions: HashMap<ImStr, FunctionDefinition>,
+    
+    pub errors: Vec<AnalyzeErr>,
+    pub references: Vec<VariableDefinition>,
 }
+
+#[derive(Debug, Clone, Default)]
+pub enum AnalyzeErr {
+    #[default]
+    None,
+    Unimplemented,
+    UnknownVar,
+    BadFnCall,
+    RepeatedArg,
+}
+
+
+
+#[derive(Debug, Clone, Derivative)]
+#[derivative(Eq, Hash, PartialEq)]
+pub struct FunctionDefinition {
+    #[derivative(PartialEq = "ignore", Hash = "ignore")]
+    pub args: VariablesContext,
+    pub expr: ExprInd,
+}
+
+#[derive(Debug, Clone, Default, Derivative)]
+#[derivative(Eq, Hash, PartialEq)]
+pub enum VariableDefinition{
+    #[default]
+    None,
+    Function(ImStr),
+    Variable{
+        name: ImStr, 
+        place: ExprInd,
+        #[derivative(PartialEq = "ignore", Hash = "ignore")]
+        n: u32
+    },
+    Special(ImStr),
+    Number(u64),
+    Unknown
+}
+
+pub type VariablesContext = HashMap<ImStr, VariableDefinition>;
