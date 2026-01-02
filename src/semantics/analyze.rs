@@ -186,7 +186,7 @@ impl AnalyzerContext {
     fn analyze_var(&mut self, name: &Token, expr: ExprRef) {
         match &name.ty {
             TokenType::Symbol(n, SymbolType::Default) => {
-                for ee in &self.variables {
+                for ee in (&self.variables).into_iter().rev() {
                     if let Some(def) = ee.get(n) {
                         //dbg!(expr.ind().0);
                         self.references[expr.ind().0] = def.clone();

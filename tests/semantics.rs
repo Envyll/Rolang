@@ -24,3 +24,17 @@ fn check_semantics() {
         assert!(matches!(errs, AnalyzeErr::None));
     }
 }
+#[test]
+fn check_semantics_repeating() {
+    let ast = parse(r#"
+    i i := (i := (i := i + i; i := i + i; i) + i; i) + i
+    "#);
+    
+    dbg!(&ast);
+    
+    //eprintln!("{}", visualize_ast(&ast));
+    
+    for errs in &ast.errors {
+        assert!(matches!(errs, AnalyzeErr::None));
+    }
+}

@@ -18,7 +18,7 @@ fn test_generation() -> Result<()> {
     let context = Context::create();
     let module = context.create_module("");
 
-    generate("
+    generate(r#"
 
     f a b := a + b
 
@@ -33,7 +33,8 @@ fn test_generation() -> Result<()> {
         diff := w - sum
         diff 
 
-    ", &module)?;
+    i i := (i := (i := i + i; i := i + i; i) + i; i) + i
+    "#, &module)?;
     let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;
 
     let f = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64) -> u64>("f") }?;
@@ -50,6 +51,10 @@ fn test_generation() -> Result<()> {
     let h = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64, u64, u64) -> u64>("h") }?;
 
     assert_eq!(dbg!(unsafe {h.call(4, 9, 5, 42)}), 1);
+    
+    let i = unsafe{engine.get_function::<unsafe extern "C" fn (u64) -> u64>("i") }?;
+
+    assert_eq!(dbg!(unsafe {i.call(6)}), 36);
 
     Ok(())
 }
