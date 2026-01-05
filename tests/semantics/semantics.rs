@@ -30,7 +30,7 @@ fn check_semantics_repeating() {
     i i := (i := (i := i + i; i := i + i; i) + i; i) + i
     "#);
     
-    dbg!(&ast);
+    //dbg!(&ast);
     
     //eprintln!("{}", visualize_ast(&ast));
     

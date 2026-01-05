@@ -91,7 +91,7 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
 pub fn priority_of_keyword(it: &str) -> (Priority, Priority) {
     use Priority::*;
     match it {
-        "and" | "then" | "for" | "when" | "while" | "type" => (And, And),
+        "and" | "then" | "for" | "when" | "while" | "type" | "match" => (And, And),
         "or" | "else" => (Or, And),
         "return" | "yield" | "not" => (Apply, And),
         "in" | "is" => (Pipe, Range),
@@ -127,7 +127,7 @@ impl Token {
     
     pub fn is_flow_kw(&self) -> bool {
         matches!(self.ty, TokenType::Keyword(ref x) if matches!(x.as_str(),
-            "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else"
+            "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else" | "match"
         ))
     }
     pub fn is_flow_op(&self) -> bool {

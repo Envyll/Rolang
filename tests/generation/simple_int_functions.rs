@@ -1,3 +1,5 @@
+
+
 use inkwell::builder::BuilderError;
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -7,7 +9,7 @@ use rolang::lexer::TokenIterator;
 use rolang::semantics::AnalyzedAST;
 use rolang::Result;
 
-fn generate(str: &str, module: &Module) -> Result<(), BuilderError> {
+pub(super) fn generate(str: &str, module: &Module) -> Result<(), BuilderError> {
     AnalyzedAST::new(TokenIterator::new(str).normalize().parse()).build_module(module)
 }
 
@@ -33,6 +35,7 @@ fn test_generation() -> Result<()> {
         diff := w - sum
         diff 
 
+    ## multiply by 6
     i i := (i := (i := i + i; i := i + i; i) + i; i) + i
     "#, &module)?;
     let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;

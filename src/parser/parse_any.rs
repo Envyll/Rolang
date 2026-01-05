@@ -1,7 +1,7 @@
 use crate::lexer::Token;
 use crate::parser::parser_state::ParserState;
 use crate::parser::priority::Priority;
-use crate::parser::{ASTErr, ASTExpr, ExprInd, ExprVec, TokenInd};
+use crate::parser::{/*ASTErr,*/ ASTExpr, ExprInd, ExprVec, TokenInd};
 use crate::push_fn;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -61,7 +61,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                     } else {
                         *this += ASTExpr::UnFlow(ind, Some(left), [prev].into());   
                         if let Some(_) = this.is_prev_flow_op() {
-                            *this /= ASTErr::UnexpectedFlowOp;
+                            //*this /= ASTErr::UnexpectedFlowOp;
                         }
                     }  
                 } else if is_flow_kw {
@@ -118,7 +118,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 } else if let Some((mhs, rhs)) = this.is_prev_flow_op() {
                     *this.prev_expr_mut().unwrap() = ASTExpr::UnFlow(ind, mhs, rhs.clone());
                     if is_flow_op {
-                        *this /= ASTErr::UnexpectedFlowOp;
+                        //*this /= ASTErr::UnexpectedFlowOp;
                     }
                 } else {
                     *this += ASTExpr::UnFlow(ind, None, [expr_len.prev().unwrap()].into());    

@@ -3,7 +3,6 @@ use derivative::Derivative;
 use crate::ImStr;
 use crate::parser::{ExprInd, AST};
 
-pub mod types;
 mod analyze;
 
 #[derive(Debug, Clone)]
@@ -32,6 +31,8 @@ pub enum AnalyzeErr {
     UnknownVar,
     BadFnCall,
     RepeatedArg,
+    BadPattern,
+    NotFullMatch,
 }
 
 
@@ -58,7 +59,21 @@ pub enum VariableDefinition{
     },
     Special(ImStr),
     Number(u64),
-    Unknown
+
+    Match(
+        #[derivative(PartialEq = "ignore", Hash = "ignore")]
+        Vec<(Pattern, ExprInd)>,
+    ),
+
+    Unknown,
 }
 
 pub type VariablesContext = HashMap<ImStr, VariableDefinition>;
+
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    Number(u64),
+    Or(Vec<Self>),
+    
+    Bad
+}

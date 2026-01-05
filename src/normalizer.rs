@@ -1,7 +1,7 @@
 use crate::ImStr;
 use crate::lexer::{BracketType, Lines, SymbolType, Token, TokenIterator, TokenType};
 use std::mem;
-use crate::parser::priority::Priority;
+use crate::parser::priority::{Priority};
 
 #[derive(Debug, Clone)]
 pub struct NormalizedTokenIterator {
@@ -161,17 +161,17 @@ fn is_prev_good_for_indent_or_dedent(tok: &Option<Token>) -> bool {
     }
 }
 
-fn is_next_good_for_semicolon(Token { ty, .. }: &Token) -> bool {
+fn is_next_good_for_semicolon(tok @ Token { ty, .. }: &Token) -> bool {
     match ty {
         TokenType::Close(_)
         | TokenType::Symbol(..)
         | TokenType::Number { .. }
         | TokenType::String { .. }
         | TokenType::Character { .. }
-        | TokenType::Keyword { .. }
         | TokenType::Colon
         | TokenType::ColonEq
         | TokenType::ColonColonEq => true,
+        TokenType::Keyword { .. } if !tok.is_flow_kw() => true,
         _ => false,
     }
 }
@@ -189,12 +189,13 @@ fn is_prev_good_for_semicolon(tok: &Option<Token>) -> bool {
     }
 }
 
-fn is_next_good_for_indent(Token { ty, .. }: &Token) -> bool {
+fn is_next_good_for_indent(tok @ Token { ty, .. }: &Token) -> bool {
     match ty {
         TokenType::Open(_, _)
         | TokenType::Colon
         | TokenType::ColonEq
         | TokenType::ColonColonEq => true,
+        TokenType::Keyword(_) if tok.is_flow_kw() => true,
         _ => false,
     }
 }

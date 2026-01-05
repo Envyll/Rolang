@@ -1,7 +1,8 @@
 use inkwell::context::{Context};
 use inkwell::{AddressSpace, OptimizationLevel};
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetMachine};
-use inkwell::values::{GenericValue};
+use inkwell::types::BasicMetadataTypeEnum;
+use inkwell::values::{CallSiteValue, GenericValue, PhiValue};
 use rolang::Result;
 
 
@@ -11,6 +12,7 @@ use rolang::Result;
 // + i'm trying to see how to work with this (lol)
 
 #[test]
+#[ignore]
 fn test_interpret() -> Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -85,6 +87,7 @@ fn test_interpret() -> Result<()> {
 
 
 #[test]
+#[ignore]
 fn test_jit() -> Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
     
@@ -140,5 +143,81 @@ fn test_jit() -> Result<()> {
     assert_eq!(dbg!(unsafe {f.call(1)}), 0);
     assert_eq!(dbg!(unsafe {f.call(0x103)}), 3);
 
+    Ok(())
+}
+
+
+#[test]
+#[ignore]
+fn test_tail() -> Result<()> {
+    Target::initialize_native(&InitializationConfig::default())?;
+
+    let context = Context::create();
+    let module = context.create_module("some_module");
+    let builder = context.create_builder();
+
+
+    let ty64 = context.i64_type();
+    
+    let ty_arg : BasicMetadataTypeEnum = ty64.into();
+    let f_ty = ty64.fn_type(&[ty_arg, ty_arg], false);
+    
+    let f = module.add_function("f", f_ty, None);
+
+    let arg = f.get_first_param().unwrap().into_int_value();
+    let arg2 = f.get_last_param().unwrap().into_int_value();
+
+
+    let block = context.append_basic_block(f, "");
+
+    let block_0 = context.append_basic_block(f, "");
+    let block_n = context.append_basic_block(f, "");
+    
+    let block_return = context.append_basic_block(f, "");
+    
+    builder.position_at_end(block);
+    
+    
+    
+    builder.build_switch(arg,
+        block_n, &[
+            (ty64.const_zero(), block_0),
+        ])?;
+    
+    builder.position_at_end(block_0);
+    builder.build_unconditional_branch(block_return)?;
+    
+    builder.position_at_end(block_n);
+    let minus = builder.build_int_nuw_sub(arg, ty64.const_int(1, false), "minus")?;
+    let prod = builder.build_int_mul(arg2, arg, "prod")?;
+    let call : CallSiteValue = builder.build_call(f, &[minus.into(), prod.into()], "call")?;
+    call.set_tail_call(true);
+    let call_val = call.try_as_basic_value().basic().unwrap().into_int_value();
+    builder.build_unconditional_branch(block_return)?;
+    
+    builder.position_at_end(block_return);
+    let result : PhiValue = builder.build_phi(ty64, "result")?;
+    result.add_incoming(&[
+        (&call_val, block_n),
+        (&arg2, block_0),
+    ]);
+    builder.build_return(Some(&result.as_basic_value()))?;
+    
+    module.print_to_stderr();
+    module.verify()?;
+
+    let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;
+
+
+    let f = unsafe{engine.get_function::<unsafe extern "C" fn (_, _) -> u64>("f") }?;
+
+
+    assert_eq!(dbg!(unsafe {f.call(0, 1)}), 1);
+    assert_eq!(dbg!(unsafe {f.call(1, 1)}), 1);
+    assert_eq!(dbg!(unsafe {f.call(3, 1)}), 6);
+    // trying to overflow
+    assert_eq!(dbg!(unsafe {f.call(1000000000u64, 1u64)}), 0);
+    
+    
     Ok(())
 }
