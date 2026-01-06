@@ -20,8 +20,7 @@ Something is working but it is just a small part…
   - [X] Lexer
   - [X] Parser
     - [ ] A bit update it for new ideas (step by step...)
-      - [ ] Tuples using commas
-      - [ ] ...
+      - [ ] Change some keywords priorities??
   - [X] Semantic
   - [X] LLVM Compile
   - [ ] Compiling from source files (not interesting part:( )
@@ -36,6 +35,7 @@ Something is working but it is just a small part…
     - [ ] Closures??? (far?)
     - [ ] CPS💀/Coroutines (very far...)
   - [ ] Expressions 
+    - [ ] Calling functions using `.` 
     - [X] Arithmetic
       - [ ] More arithmetic? 
       - [ ] Constant expressions? 
@@ -56,7 +56,7 @@ Something is working but it is just a small part…
         - [ ] More int types? 
       - [ ] Float??
     - [ ] Compounds
-      - [ ] **Tuples**
+      - [X] Tuples
       - [ ] Booleans (not basic — it'd be boring...)
       - [ ] Arrays
       - [ ] Boxes/Pointers (far)
@@ -66,12 +66,12 @@ Something is working but it is just a small part…
       - [ ] First class functions
       - [ ] User-defined types?? (far)
       - [ ] Traits??? (very far)
-  - [ ] Patter Matching
+  - [ ] Pattern Matching
     - [X] Int Constants
     - [ ] Simple Int Constant Expressions
-    - [ ] Multipatterns 
     - [ ] Tuple patterns
     - [ ] Ranges/comparison?
+    - [ ] Guards
     - [ ] ...
   - [ ] Extern functions
 - Documentation (very far) 

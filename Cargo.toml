@@ -11,10 +11,6 @@ path = "src/lib.rs"
 unicode-properties = "0.1.4"
 imstr = "0.2.0"
 bitflags = "2.10.0"
-#melior = { version = "0.26.0", features = ["ods-dialects", "helpers"] } #failed btw
-#im = "15.1.0"
 thiserror = "2.0.17"
-maplit = "1.0.2"
 inkwell = { version = "0.7.1", features = [ "llvm21-1" ] }
-#num-bigint = "0.4.6"
 derivative = "2.2.0"

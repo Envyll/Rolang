@@ -96,7 +96,15 @@ impl<'ctx> ExprRef<'ctx> {
 
         Some((&self.ctx[l], n.into_iter().map(|e| self.ctx.at(*e)), &self.ctx[r]))
     }
-    
+
+    pub fn is_member(self) -> Option<Self> {
+        let ExprRefType::Unary(t, expr) = self.ty() else { None? };
+        let TokenType::Operator = t.ty else {None?};
+        let "." = t.slice.as_str() else {None?};
+
+        Some(expr)
+    }
+
     pub fn ty(self) -> ExprRefType<'ctx, impl Iterator<Item=ExprRef<'ctx>> + 'ctx> {
         let at = |&e| self.ctx.at(e);
         let atm = |e: &Option<_>| e.map(|e| self.ctx.at(e));

@@ -60,3 +60,48 @@ fn test_tuples() -> rolang::Result<()> {
 
     Ok(())
 }
+
+
+#[test]
+fn test_tuples_creation() -> rolang::Result<()> {
+    Target::initialize_native(&InitializationConfig::default())?;
+
+    let context = Context::create();
+    let module = context.create_module("");
+
+    generate(r#"
+    f x := ()
+    g x y := x, y
+    h x := (x,)
+
+    i x := g x x, h x
+
+    j x := 0 (1 (i x))
+    "#, &module)?;
+
+    module.print_to_stderr();
+
+    let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;
+
+
+    let f = unsafe{engine.get_function::<unsafe extern "C" fn (u64) -> ()>("f")?};
+    let g = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64) -> (u64, u64)>("g")?};
+    let h = unsafe{engine.get_function::<unsafe extern "C" fn (u64,) -> (u64,)>("h")?};
+
+    let j = unsafe{engine.get_function::<unsafe extern "C" fn (u64,) -> u64>("j")?};
+
+    unsafe {
+        assert_eq!(f.call(0), ());
+        assert_eq!(g.call(0, 1), (0, 1));
+        assert_eq!(g.call(1, 0), (1, 0));
+        assert_eq!(h.call(2, ), (2, ));
+        //bad (call conv issue)
+        //assert_eq!(i.call(3, ), ((3, 3), (3,) ));
+        assert_eq!(j.call(3, ), 3);
+
+
+    }
+
+    Ok(())
+}
+
