@@ -84,6 +84,12 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                     f(&ast, rhs[i]);
                 }
             },
+            ASTExpr::Tuple(ref exprs) => {
+                assert_eq!(len, exprs.len(), "fail at tuple({})", exprs.len());
+                for (i, f) in fns.into_iter().enumerate() {
+                    f(&ast, exprs[i]);
+                }
+            },
         }
     }
 }
@@ -180,4 +186,13 @@ fn test_flow() {
        {[][]}
     ]
     )
+}
+
+#[test]
+fn test_tuples() {
+    test_parse("
+        a, b  | c, d..e, f, | g, h, i,
+    ", test_nodes![
+        [[([][]) ([][[][]][])] ([][][]) ]
+    ])
 }

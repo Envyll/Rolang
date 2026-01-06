@@ -139,6 +139,9 @@ impl AnalyzedAST {
                 vars.insert(VariableDefinition::Variable {place: expr.ind(), name: l.slice_or_name().clone(), n: 0}, value.into());
                 value
             }
+            ExprRefType::Tuple(_m) => {
+                unimplemented!()
+            }
         })
     }
 

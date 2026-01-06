@@ -1,8 +1,9 @@
 use crate::lexer::{BracketType, Lines, Token, TokenType};
 use crate::parser::{AST, ASTErr, ASTExpr, ExprInd, TokenInd, ExprVec};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::iter::IntoIterator;
 use std::ops::{AddAssign, DivAssign, ShlAssign};
+use std::rc::Rc;
 
 pub struct ParserState<'a, IterT: Iterator<Item = Token>> {
     completion_stack: Vec<(TokenInd, Box<dyn FnOnce(&mut Self) + 'a>)>,
@@ -106,6 +107,12 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let Some(&ASTExpr::UnFlow(t, mhs, ref rhs)) = self.prev_expr() else {return None};
         let TokenType::Colon = self.tokens[t.0].ty else {return None};
         Some((mhs, rhs))
+    }
+
+    pub fn try_get_prev_tuple(&mut self) -> Option<&mut VecDeque<ExprInd>> {
+        let ASTExpr::Tuple(vec) = self.prev_expr_mut()? else {return None};
+
+        Rc::get_mut(vec)
     }
 }
 

@@ -4,12 +4,12 @@ use crate::lexer::{Token, TokenType};
 pub enum Priority {
     Close, // ) ] ; …
 
-    Comma, // ,
-
     Or,  // or else … left
     And, // …<- …<-| : := ::= not and then match while for … right
 
     Pipe, // >… =… <… |… &… :… left
+
+    Tuple, // , right
 
     Range, // .. right
 
@@ -75,7 +75,7 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     }
 
     if it.starts_with(['|', '&', '<', '>', '=', ':']) {
-        return (Priority::Pipe, Priority::Range);
+        return (Priority::Pipe, Priority::Tuple);
     }
 
     if it.starts_with(['*', '/', '\\', '%']) {
@@ -105,11 +105,11 @@ impl Token {
     pub fn priority(&self) -> (Priority, Priority) {
         use Priority::*;
         match self.ty {
-            TokenType::Open(_, _) => (Apply, Comma),
+            TokenType::Open(_, _) => (Apply, Or),
             TokenType::Close(_) => (Close, Path),
             TokenType::Operator => priority_of_operator(&self.slice),
-            TokenType::Comma => (Comma, Comma),
-            TokenType::Semicolon => (Close, Comma),
+            TokenType::Comma => (Tuple, Tuple),
+            TokenType::Semicolon => (Close, Or),
             TokenType::Colon => (And, And),
             TokenType::ColonEq => (Or, And),
             TokenType::ColonColonEq => (Or, And),

@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use crate::lexer::{SymbolType, Token, TokenType};
-use crate::parser::{ASTExpr, ExprInd, ExprVec, AST};
+use crate::parser::{ASTExpr, ExprInd, AST};
 use ASTExpr::*;
 use crate::ImStr;
 
@@ -100,7 +100,8 @@ impl<'ctx> ExprRef<'ctx> {
     pub fn ty(self) -> ExprRefType<'ctx, impl Iterator<Item=ExprRef<'ctx>> + 'ctx> {
         let at = |&e| self.ctx.at(e);
         let atm = |e: &Option<_>| e.map(|e| self.ctx.at(e));
-        let att = |ee: &'ctx ExprVec| ee.into_iter().map(|&e| self.ctx.at(e));
+        let atb = |(left, right): (&'ctx [ExprInd], &'ctx [ExprInd])| left.into_iter().chain(right).map(|&e| self.ctx.at(e));
+        let att = |slice: &'ctx [ExprInd]| atb((&slice[0..0], slice));
         let tok = |&i| &self.ctx[i];
         
         match &self.expr {
@@ -113,6 +114,7 @@ impl<'ctx> ExprRef<'ctx> {
             Braced(l, m, r) => ExprRefType::Braced(tok(l), att(m), tok(r)),
             Flow(l, t, m, r) => ExprRefType::Flow(at(l), tok(t), atm(m), att(r)),
             UnFlow(t, m, r) => ExprRefType::UnFlow(tok(t), atm(m), att(r)),
+            Tuple(m) => ExprRefType::Tuple(atb(m.as_slices())),
         }
     }
 }
@@ -130,6 +132,7 @@ impl<'ctx> IntoIterator for ExprRef<'ctx> {
             &Apply(ref n) | &Braced(_, ref n, _) => Box::new(n.into_iter().map(|e| self.ctx.at(*e))),
             &Flow(l, _, m, ref r) => Box::new(Some(l).into_iter().chain(m.into_iter()).chain(r.iter().map(|e| *e)).map(|e| self.ctx.at(e)) ),
             &UnFlow(_, m, ref r) => Box::new(m.into_iter().chain(r.iter().map(|&e|e)).map(|e| self.ctx.at(e))),
+            &Tuple(ref n) => Box::new(n.iter().map(|&e| self.ctx.at(e))),
         }
     }
 }
@@ -144,4 +147,5 @@ pub enum ExprRefType<'ctx, Iter: Iterator<Item=ExprRef<'ctx>> + 'ctx> {
     Braced(&'ctx Token, Iter, &'ctx Token, ),
     Flow(ExprRef<'ctx>, &'ctx Token, Option<ExprRef<'ctx>>, Iter),
     UnFlow(&'ctx Token, Option<ExprRef<'ctx>>, Iter),
+    Tuple(Iter),
 }

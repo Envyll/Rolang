@@ -2,7 +2,7 @@ use crate::ImStr;
 use crate::lexer::Token;
 use crate::normalizer::NormalizedTokenIterator;
 use crate::parser::parser_state::ParserState;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::rc::Rc;
@@ -66,9 +66,7 @@ pub enum ASTExpr {
     Braced(TokenInd, ExprVec, TokenInd),
     /// Examples\
     /// `abc or ghi` \
-    /// `abc when def : ghi` \
     /// `abc then def :{ghi; …}` \
-    /// `abc type def : \n ghi\n …\n` \
     /// Grammar:\
     /// lhs op (pattern `:`)? (rhs| `\n` rhs* `\n` | `{` rhs* `}`)
     Flow(ExprInd, TokenInd, Option<ExprInd>, ExprVec),
@@ -79,6 +77,8 @@ pub enum ASTExpr {
     /// `a := b`\
     /// `a ::= b`
     UnFlow(TokenInd, Option<ExprInd>, ExprVec),
+    /// `a, b, c`
+    Tuple(Rc<VecDeque<ExprInd>>),
 }
 
 #[derive(Clone, Debug)]

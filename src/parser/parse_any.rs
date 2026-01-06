@@ -1,4 +1,4 @@
-use crate::lexer::Token;
+use crate::lexer::{Token, TokenType};
 use crate::parser::parser_state::ParserState;
 use crate::parser::priority::Priority;
 use crate::parser::{/*ASTErr,*/ ASTExpr, ExprInd, ExprVec, TokenInd};
@@ -7,12 +7,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
-    pub fn try_parse_any(&mut self, min_priority: Priority, was_flow: bool) -> Option<()> {
+    pub fn try_parse_any(&mut self, min_priority: Priority, was_flow: bool, allow_prev_unary_right: bool) -> Option<()> {
         let pr = self.current().unwrap().priority();
 
         if min_priority == Priority::Path
             || pr.0 == Priority::Close
             || min_priority == Priority::Apply && pr.0 < Priority::Apply
+            || allow_prev_unary_right && pr.0 < min_priority
         {
             None?
         }
@@ -43,9 +44,11 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let pr = curr.priority();
         let is_flow_kw = curr.is_flow_kw();
         let is_flow_op = curr.is_flow_op();
+        let is_comma = matches!(curr.ty, TokenType::Comma);
         let ind = this.curr_token_ind;
         let is_anything = Rc::new(Cell::new(None));
         let is_anything2 = is_anything.clone();
+
 
         if pr.0 >= min_priority {
             if min_priority < pr.1 && !is_flow_op {
@@ -74,6 +77,14 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                     } else {
                         *this += ASTExpr::Flow(left, ind, None, [prev].into());    
                     }  
+                } else if is_comma {
+                    if is_anything.get().is_none() {
+                        *this += ASTExpr::Tuple(Rc::new(vec![left].into()));
+                    } else if let Some(prev) = this.try_get_prev_tuple() {
+                        prev.push_front(left)
+                    } else {
+                        *this += ASTExpr::Tuple(Rc::new(vec![left, prev].into()));
+                    }
                 } else if is_anything.get().is_some() {
                     *this += ASTExpr::Binary(left, ind, prev);
                 } else {
@@ -82,7 +93,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 };
             }
             this.advance();
-            is_anything2.set(this.try_parse_any(pr.1, is_flow_kw || is_flow_op));
+            is_anything2.set(this.try_parse_any(pr.1, is_flow_kw || is_flow_op, is_comma));
         };
     }
 
@@ -130,6 +141,6 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             };
         }
         this.advance();
-        is_anything2.set(this.try_parse_any(pr_right, is_flow));
+        is_anything2.set(this.try_parse_any(pr_right, is_flow, false));
     }
 }

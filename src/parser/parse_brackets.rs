@@ -87,6 +87,6 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             
             // end
         }
-        push_fn! {isnt_empty2 = this.try_parse_any(Priority::Comma, false)}
+        push_fn! {isnt_empty2 = this.try_parse_any(Priority::Or, false, false)}
     }
 }

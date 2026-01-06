@@ -103,6 +103,12 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
                 visualize_expr(&ast, expr, depth + 1, out);
             }
         }
+        ASTExpr::Tuple(ref m) => {
+            out.push_str(&format!("{indent}Tuple: {}\n", m.len()));
+            for &expr in m.iter() {
+                visualize_expr(&ast, expr, depth + 1, out);
+            }
+        }
         #[allow(unreachable_patterns)]
         ref other => {
             out.push_str(&format!("{indent}{other:?} (not implemented)\n"));

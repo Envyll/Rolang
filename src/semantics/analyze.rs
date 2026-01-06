@@ -187,6 +187,12 @@ impl AnalyzerContext {
                     self.errors[expr.ind().0] = AnalyzeErr::Unimplemented;
                 }
             }
+            ExprRefType::Tuple(n) => {
+                self.errors[expr.ind().0] = AnalyzeErr::Unimplemented;
+                for e in n {
+                    self.analyze_expr(e);
+                }
+            }
         }
     }
 
@@ -317,6 +323,9 @@ impl AnalyzerContext {
             ExprRefType::Braced(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
             ExprRefType::Flow(_, _, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
             ExprRefType::UnFlow(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+            ExprRefType::Tuple(_m) => {
+                self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad
+            }
         }
     }
 }
