@@ -10,7 +10,7 @@ pub enum RoType {
     Never,
     Int,
     #[derivative(Default)]
-    Tuple(Vec<RoType>)
+    Tuple(Vec<RoType>),
 }
 
 impl RoType {
@@ -24,9 +24,14 @@ impl RoType {
 
     pub fn basic_type<'a>(&self, ctx: ContextRef<'a>) -> BasicTypeEnum<'a> {
         match self {
-            RoType::Never => {ctx.struct_type(&[], false).into()}
-            RoType::Int => {ctx.i64_type().into()}
-            RoType::Tuple(t) => {ctx.struct_type(&t.iter().map(|t|t.basic_type(ctx)).collect::<Vec<_>>(), false).into()}
+            RoType::Never => ctx.struct_type(&[], false).into(),
+            RoType::Int => ctx.i64_type().into(),
+            RoType::Tuple(t) => ctx
+                .struct_type(
+                    &t.iter().map(|t| t.basic_type(ctx)).collect::<Vec<_>>(),
+                    false,
+                )
+                .into(),
         }
     }
 }

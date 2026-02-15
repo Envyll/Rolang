@@ -1,5 +1,5 @@
 use crate::lexer::{BracketType, Lines, Token, TokenType};
-use crate::parser::{AST, ASTErr, ASTExpr, ExprInd, TokenInd, ExprVec};
+use crate::parser::{AST, ASTErr, ASTExpr, ExprInd, ExprVec, TokenInd};
 use std::collections::{HashMap, VecDeque};
 use std::iter::IntoIterator;
 use std::ops::{AddAssign, DivAssign, ShlAssign};
@@ -85,44 +85,64 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn prev_expr_mut(&mut self) -> Option<&mut ASTExpr> {
         self.expressions.last_mut().map(|e| &mut e.1)
     }
-    
+
     pub fn prev_expr(&self) -> Option<&ASTExpr> {
         self.expressions.last().map(|e| &e.1)
     }
-    
+
     pub fn is_prev_flow_br(&self) -> Option<&ExprVec> {
-        let Some(&ASTExpr::Braced(l, ref m, _)) = self.prev_expr() else {return None};
-        let TokenType::Open(ty, _) = self.tokens[l.0].ty else {return None};
-        let (BracketType::Indent | BracketType::Curly {with_stick: false}) = ty else {return None};
+        let Some(&ASTExpr::Braced(l, ref m, _)) = self.prev_expr() else {
+            return None;
+        };
+        let TokenType::Open(ty, _) = self.tokens[l.0].ty else {
+            return None;
+        };
+        let (BracketType::Indent | BracketType::Curly { with_stick: false }) = ty else {
+            return None;
+        };
         Some(m)
     }
     pub fn is_prev_indent_br(&self) -> Option<&ExprVec> {
-        let Some(&ASTExpr::Braced(l, ref m, _)) = self.prev_expr() else {return None};
-        let TokenType::Open(ty, _) = self.tokens[l.0].ty else {return None};
-        let BracketType::Indent = ty else {return None};
+        let Some(&ASTExpr::Braced(l, ref m, _)) = self.prev_expr() else {
+            return None;
+        };
+        let TokenType::Open(ty, _) = self.tokens[l.0].ty else {
+            return None;
+        };
+        let BracketType::Indent = ty else { return None };
         Some(m)
     }
-    
+
     pub fn is_prev_flow_op(&self) -> Option<(Option<ExprInd>, &ExprVec)> {
-        let Some(&ASTExpr::UnFlow(t, mhs, ref rhs)) = self.prev_expr() else {return None};
-        let TokenType::Colon = self.tokens[t.0].ty else {return None};
+        let Some(&ASTExpr::UnFlow(t, mhs, ref rhs)) = self.prev_expr() else {
+            return None;
+        };
+        let TokenType::Colon = self.tokens[t.0].ty else {
+            return None;
+        };
         Some((mhs, rhs))
     }
 
     pub fn try_get_prev_tuple(&mut self) -> Option<&mut VecDeque<ExprInd>> {
-        let ASTExpr::Tuple(vec) = self.prev_expr_mut()? else {return None};
+        let ASTExpr::Tuple(vec) = self.prev_expr_mut()? else {
+            return None;
+        };
 
         Rc::get_mut(vec)
             // must be unique
-            .unwrap().into()
+            .unwrap()
+            .into()
     }
 
     pub fn try_get_prev_either(&mut self) -> Option<&mut VecDeque<ExprInd>> {
-        let ASTExpr::Either(vec) = self.prev_expr_mut()? else {return None};
+        let ASTExpr::Either(vec) = self.prev_expr_mut()? else {
+            return None;
+        };
 
         Rc::get_mut(vec)
             // must be unique
-            .unwrap().into()
+            .unwrap()
+            .into()
     }
 }
 
@@ -150,8 +170,7 @@ impl<'a, IterT: Iterator<Item = Token>> DivAssign<ASTErr> for ParserState<'a, It
         if let Some(v) = self.errors.get_mut(&ind) {
             v.push(rhs);
         } else {
-            self.errors
-                .insert(ind, vec![rhs]);
+            self.errors.insert(ind, vec![rhs]);
         }
     }
 }

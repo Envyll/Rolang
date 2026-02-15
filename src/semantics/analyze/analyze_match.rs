@@ -1,94 +1,95 @@
 use crate::lexer::{BracketType, SymbolType, TokenType};
 use crate::parser::ast_expr_traits::{ExprRef, ExprRefType};
-use crate::semantics::patterns::{PatternColumnData, PatternColumnPosition, PatternColumnSubposition, PatternTableBuilder};
+use crate::semantics::patterns::{
+    PatternColumnData, PatternColumnPosition, PatternColumnSubposition, PatternTableBuilder,
+};
 use crate::semantics::types::RoType;
 use crate::semantics::{AnalyzeErr, AnalyzerContext, VariableDefinition};
 use smallbitvec::sbvec;
 
-
 impl AnalyzerContext {
-/*
-    pub(super) fn analyze_match<'t>(&mut self, match_expr: ExprRef<'t>, exprs: impl Iterator<Item = ExprRef<'t>>) -> RoType {
-        let mut last_expr = None;
+    /*
+        pub(super) fn analyze_match<'t>(&mut self, match_expr: ExprRef<'t>, exprs: impl Iterator<Item = ExprRef<'t>>) -> RoType {
+            let mut last_expr = None;
 
-        let mut branches = vec![];
+            let mut branches = vec![];
 
-        let mut ty = RoType::Never;
+            let mut ty = RoType::Never;
 
-        for expr in exprs {
-            if let ExprRefType::UnFlow(t, Some(m) , r) = expr.ty()
-                && let TokenType::Colon = t.ty {
-                last_expr = Some(m);
+            for expr in exprs {
+                if let ExprRefType::UnFlow(t, Some(m) , r) = expr.ty()
+                    && let TokenType::Colon = t.ty {
+                    last_expr = Some(m);
 
-                branches.push((self.analyze_pattern(m), expr.ind() ));
+                    branches.push((self.analyze_pattern(m), expr.ind() ));
 
-                let mut last_type = RoType::Never;
+                    let mut last_type = RoType::Never;
 
-                self.do_in_variables_scope(|this| r.for_each(|r|last_type = this.analyze_expr(r)));
+                    self.do_in_variables_scope(|this| r.for_each(|r|last_type = this.analyze_expr(r)));
 
-                if let RoType::Never = ty {ty = last_type};
-            } else {
-                self.errors[expr.ind().0] = AnalyzeErr::BadPattern;
-                self.analyze_expr(expr);
-            }
-        }
-
-        if let Some(m) = last_expr
-            && let ExprRefType::Simple(t) = m.ty()
-            && let TokenType::Keyword(kw) = &t.ty
-            && let "_" = kw.as_str() {
-            if let AnalyzeErr::BadPattern = self.errors[m.ind().0] {
-                self.errors[m.ind().0] = AnalyzeErr::None;
-            }
-        } else {
-            self.errors[match_expr.ind().0] = AnalyzeErr::NotFullMatch;
-        }
-
-        self.references[match_expr.ind().0] =  VariableDefinition::Match(branches, ty.clone());
-        ty
-    }
-
-    fn analyze_pattern(&mut self, pattern_expr: ExprRef) -> Pattern {
-        match pattern_expr.ty() {
-            ExprRefType::Empty => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
-            ExprRefType::Simple(t) => {
-                if let TokenType::Number{..} = t.ty{
-                    let n = self.analyze_number_literal(&t, pattern_expr);
-                    if let Some(n) = n {
-                        Pattern::Number(n)
-                    } else {Pattern::Bad}
+                    if let RoType::Never = ty {ty = last_type};
                 } else {
+                    self.errors[expr.ind().0] = AnalyzeErr::BadPattern;
+                    self.analyze_expr(expr);
+                }
+            }
+
+            if let Some(m) = last_expr
+                && let ExprRefType::Simple(t) = m.ty()
+                && let TokenType::Keyword(kw) = &t.ty
+                && let "_" = kw.as_str() {
+                if let AnalyzeErr::BadPattern = self.errors[m.ind().0] {
+                    self.errors[m.ind().0] = AnalyzeErr::None;
+                }
+            } else {
+                self.errors[match_expr.ind().0] = AnalyzeErr::NotFullMatch;
+            }
+
+            self.references[match_expr.ind().0] =  VariableDefinition::Match(branches, ty.clone());
+            ty
+        }
+
+        fn analyze_pattern(&mut self, pattern_expr: ExprRef) -> Pattern {
+            match pattern_expr.ty() {
+                ExprRefType::Empty => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+                ExprRefType::Simple(t) => {
+                    if let TokenType::Number{..} = t.ty{
+                        let n = self.analyze_number_literal(&t, pattern_expr);
+                        if let Some(n) = n {
+                            Pattern::Number(n)
+                        } else {Pattern::Bad}
+                    } else {
+                        self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad
+                    }
+                }
+                ExprRefType::Unary(_, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+                ExprRefType::Binary(l, t, r) => {
+                    if let TokenType::Operator = t.ty
+                        && let "|" = t.slice.as_str() {
+                        let right = self.analyze_pattern(r);
+
+                        if let Pattern::Or(mut vec) = right {
+                            vec.push(self.analyze_pattern(l));
+                            Pattern::Or(vec)
+                        } else { Pattern::Or(vec![right, self.analyze_pattern(l), ]) }
+                    } else {
+                        self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;
+                        Pattern::Bad
+                    }
+                }
+                ExprRefType::Path(_, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;  Pattern::Bad}
+                ExprRefType::Apply(_) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;  Pattern::Bad}
+                ExprRefType::Braced(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+                ExprRefType::Flow(_, _, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+                ExprRefType::UnFlow(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
+                ExprRefType::Tuple(_m) => {
                     self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad
                 }
             }
-            ExprRefType::Unary(_, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
-            ExprRefType::Binary(l, t, r) => {
-                if let TokenType::Operator = t.ty
-                    && let "|" = t.slice.as_str() {
-                    let right = self.analyze_pattern(r);
-
-                    if let Pattern::Or(mut vec) = right {
-                        vec.push(self.analyze_pattern(l));
-                        Pattern::Or(vec)
-                    } else { Pattern::Or(vec![right, self.analyze_pattern(l), ]) }
-                } else {
-                    self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;
-                    Pattern::Bad
-                }
-            }
-            ExprRefType::Path(_, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;  Pattern::Bad}
-            ExprRefType::Apply(_) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;  Pattern::Bad}
-            ExprRefType::Braced(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
-            ExprRefType::Flow(_, _, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
-            ExprRefType::UnFlow(_, _, _) => {self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad}
-            ExprRefType::Tuple(_m) => {
-                self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented; Pattern::Bad
-            }
         }
-    }
-*/
+    */
 
-/*
+    /*
     pub(super) fn analyze_match<'t>(&mut self, match_expr: ExprRef<'t>, exprs: impl Iterator<Item = ExprRef<'t>>) -> RoType {
         let mut branches = vec![];
 
@@ -302,7 +303,8 @@ impl AnalyzerContext {
 
         for brexpr in r {
             if let ExprRefType::UnFlow(t, Some(m), right) = brexpr.ty()
-                && let TokenType::Colon = t.ty {
+                && let TokenType::Colon = t.ty
+            {
                 branches.push(brexpr.ind());
 
                 let mut last_type = RoType::Never;
@@ -310,15 +312,27 @@ impl AnalyzerContext {
 
                 self.do_in_variables_scope(|this| {
                     patterns.push_new(branches.len() - 1);
-                    this.analyze_pattern(m, &mut patterns, &l_ty, &mut PatternColumnPosition::default(), 1);
+                    this.analyze_pattern(
+                        m,
+                        &mut patterns,
+                        &l_ty,
+                        &mut PatternColumnPosition::default(),
+                        1,
+                    );
                     right.for_each(|r| {
                         last_type = this.analyze_expr(r);
                         last_expr_ind = Some(r);
                     })
                 });
 
-                if let RoType::Never = ty {ty = last_type} else if ty != last_type {
-                    self.errors[last_expr_ind.unwrap().ind().0] = AnalyzeErr::WrongMatchBranchType {expected: ty.clone(), got: last_type};
+                if let RoType::Never = ty {
+                    ty = last_type
+                } else if ty != last_type {
+                    self.errors[last_expr_ind.unwrap().ind().0] =
+                        AnalyzeErr::WrongMatchBranchType {
+                            expected: ty.clone(),
+                            got: last_type,
+                        };
                 };
             } else {
                 self.errors[brexpr.ind().0] = AnalyzeErr::BadMatchBranch;
@@ -329,7 +343,7 @@ impl AnalyzerContext {
         self.references[match_expr.ind().0] = VariableDefinition::Match {
             branches,
             patterns: patterns.build(),
-            ty : ty.clone(),
+            ty: ty.clone(),
             pred_ty: l_ty,
         };
 
@@ -349,16 +363,18 @@ impl AnalyzerContext {
                 self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;
             }
             ExprRefType::Simple(t) => {
-                if let TokenType::Number{..} = t.ty {
+                if let TokenType::Number { .. } = t.ty {
                     let Some(n) = self.analyze_number_literal(&t, pattern_expr) else {
                         return;
                     };
                     if !ty.is_int() {
-                        self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {expected: ty.clone()};
+                        self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {
+                            expected: ty.clone(),
+                        };
                         return;
                     }
 
-                    let PatternTableBuilder{elements, branches} = patterns;
+                    let PatternTableBuilder { elements, branches } = patterns;
 
                     match elements.get_mut(path) {
                         Some(PatternColumnData::Int { values, ignore }) => {
@@ -367,7 +383,7 @@ impl AnalyzerContext {
                             for value in values.iter_mut().rev().take(count) {
                                 *value = n.into();
                             }
-                            for i in branches.len() - count .. branches.len() {
+                            for i in branches.len() - count..branches.len() {
                                 ignore.set(i, false);
                             }
                         }
@@ -378,10 +394,12 @@ impl AnalyzerContext {
                             for value in values.iter_mut().rev().take(count) {
                                 *value = n.into();
                             }
-                            for i in branches.len() - count .. branches.len() {
+                            for i in branches.len() - count..branches.len() {
                                 ignore.set(i, false);
                             }
-                            patterns.elements.insert(path.clone(), PatternColumnData::Int {values, ignore});
+                            patterns
+                                .elements
+                                .insert(path.clone(), PatternColumnData::Int { values, ignore });
                         }
                         #[allow(unreachable_patterns)]
                         _ => {
@@ -406,21 +424,25 @@ impl AnalyzerContext {
             }
             ExprRefType::Braced(l, mut m, _) => {
                 match l.ty {
-                    TokenType::Open(BracketType::Round { with_stick: false }, SymbolType::Default) => {
+                    TokenType::Open(
+                        BracketType::Round { with_stick: false },
+                        SymbolType::Default,
+                    ) => {
                         if let Some(expr) = m.next() {
-                            self.analyze_pattern(expr, patterns, ty, path, count );
+                            self.analyze_pattern(expr, patterns, ty, path, count);
                         } else {
                             if ty.is_unit() {
                                 // do nothing
                             } else {
-                                self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType{expected: ty.clone()};
+                                self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {
+                                    expected: ty.clone(),
+                                };
                             }
                         }
 
                         for expr in m {
                             self.errors[expr.ind().0] = AnalyzeErr::BadPattern;
                         }
-
                     }
                     _ => {
                         self.errors[pattern_expr.ind().0] = AnalyzeErr::Unimplemented;
@@ -436,16 +458,26 @@ impl AnalyzerContext {
             ExprRefType::Tuple(e) => {
                 let branches_count_start = patterns.branches.len();
                 let RoType::Tuple(m) = ty else {
-                    self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {expected: ty.clone()};
+                    self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {
+                        expected: ty.clone(),
+                    };
                     return;
                 };
                 if m.len() != e.len() {
-                    self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {expected: ty.clone()};
+                    self.errors[pattern_expr.ind().0] = AnalyzeErr::WrongPatternType {
+                        expected: ty.clone(),
+                    };
                     return;
                 }
                 for (i, (expr, ty)) in e.zip(m).enumerate() {
                     path.push(PatternColumnSubposition::Field(i));
-                    self.analyze_pattern(expr, patterns, ty, path, count + patterns.branches.len() - branches_count_start);
+                    self.analyze_pattern(
+                        expr,
+                        patterns,
+                        ty,
+                        path,
+                        count + patterns.branches.len() - branches_count_start,
+                    );
                     assert_eq!(path.pop(), Some(PatternColumnSubposition::Field(i)));
                 }
             }

@@ -86,13 +86,16 @@ fn unterminated_char() {
 
 #[test]
 fn generic_seq() {
-    assert_eq!(lex("a'aa'aa'aaa@a"), [
-        TokenType::Symbol("a".into(), SymbolType::Default),
-        TokenType::Symbol("'aa".into(), SymbolType::Generic),
-        TokenType::Symbol("'aa".into(), SymbolType::Generic),
-        TokenType::Symbol("'aaa".into(), SymbolType::Generic),
-        TokenType::Symbol("@a".into(), SymbolType::Pointer),
-    ]);
+    assert_eq!(
+        lex("a'aa'aa'aaa@a"),
+        [
+            TokenType::Symbol("a".into(), SymbolType::Default),
+            TokenType::Symbol("'aa".into(), SymbolType::Generic),
+            TokenType::Symbol("'aa".into(), SymbolType::Generic),
+            TokenType::Symbol("'aaa".into(), SymbolType::Generic),
+            TokenType::Symbol("@a".into(), SymbolType::Pointer),
+        ]
+    );
 }
 
 #[test]

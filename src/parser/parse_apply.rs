@@ -27,11 +27,11 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 if is_not_empty.get().is_some() {
                     *this += ASTExpr::Unary(ind, this.expressions_len().prev().unwrap())
                 } else {
-                    *this += ASTExpr::Simple(ind,)
+                    *this += ASTExpr::Simple(ind)
                 };
             };
             this.advance();
-            *this <<= move |this| {is_not_empty2.set(this.try_parse_semiatomic())};
+            *this <<= move |this| is_not_empty2.set(this.try_parse_semiatomic());
         } else if let (Priority::Apply, _) = curr.priority() {
             let is_path = Rc::new(Cell::new(None));
             let is_path2 = is_path.clone();
@@ -40,7 +40,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 if is_path.get().is_some() {
                     this.parse_path_or_stop(this.expressions_len().prev().unwrap());
                 } else {
-                    this.parse_unary(ind, Priority::Path,);
+                    this.parse_unary(ind, Priority::Path);
                 };
             };
             is_path2.set(this.try_parse_atomic());

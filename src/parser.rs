@@ -8,6 +8,7 @@ use std::ops::Index;
 use std::rc::Rc;
 use thiserror::Error;
 
+pub mod ast_expr_traits;
 mod parse_any;
 mod parse_apply;
 mod parse_brackets;
@@ -15,7 +16,6 @@ mod parse_path;
 pub mod parser_state;
 pub mod priority;
 pub mod visualize;
-pub mod ast_expr_traits;
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
@@ -143,8 +143,10 @@ impl Index<ExprInd> for AST {
     }
 }
 
-impl AST{
-    pub fn root(&self) -> ExprInd {ExprInd(self.expressions.len() - 1)}
+impl AST {
+    pub fn root(&self) -> ExprInd {
+        ExprInd(self.expressions.len() - 1)
+    }
 }
 
 type ExprVec = Rc<[ExprInd]>;

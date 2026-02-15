@@ -1,18 +1,18 @@
 use self::lex::*;
+use crate::lexer::TokenType::{Keyword, Symbol};
 use crate::{ImStr, ImStrData};
 use bitflags::bitflags;
 use std::iter::Enumerate;
 use std::ops::Range;
-use crate::lexer::TokenType::{Keyword, Symbol};
 
 mod lex;
 mod lex_char;
 mod lex_number;
+mod lex_open;
 mod lex_operator;
 mod lex_string;
 mod lex_symbol;
 pub mod token_traits;
-mod lex_open;
 
 // to/do: mb migrate to &str instead of ImStr??
 
@@ -110,14 +110,13 @@ pub enum BracketType {
     NonAscii { with_stick: bool },
 }
 
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq,)]
-pub enum SymbolType{
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum SymbolType {
     /// `a` `()`
     Default,
     /// `'a` `'()`
     Generic,
-    /// `@a` `@()` 
+    /// `@a` `@()`
     Pointer,
     /// `$a` `$()`
     Borrow,
@@ -184,7 +183,7 @@ impl Token {
     pub fn slice_or_name(&self) -> &ImStr {
         match &self.ty {
             Keyword(str) | Symbol(str, _) => str,
-            _ => &self.slice
+            _ => &self.slice,
         }
     }
 }

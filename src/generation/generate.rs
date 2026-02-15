@@ -1,9 +1,9 @@
-use crate::parser::ast_expr_traits::{ExprRef, ExprRefType};
+use crate::AResult;
 use crate::parser::ExprInd;
+use crate::parser::ast_expr_traits::{ExprRef, ExprRefType};
 use crate::semantics::patterns::{PatternColumnData, PatternColumnOrder, PatternTable};
 use crate::semantics::types::RoType;
-use crate::semantics::{AnalyzedAST, FunctionDefinition, VariableDefinition, };
-use crate::AResult;
+use crate::semantics::{AnalyzedAST, FunctionDefinition, VariableDefinition};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::module::Linkage;
@@ -17,7 +17,7 @@ type Vars<'a> = HashMap<VariableDefinition, BasicValueEnum<'a>>;
 type Fns<'a> = HashMap<FunctionDefinition, FunctionValue<'a>>;
 
 impl AnalyzedAST {
-    pub fn build_module(&self, module: &Module, ) -> AResult {
+    pub fn build_module(&self, module: &Module) -> AResult {
         let mut fns = HashMap::new();
 
         for (name, def) in &self.functions {
@@ -48,7 +48,6 @@ impl AnalyzedAST {
 
         //module.print_to_stderr();
         module.verify().map_err(|err| anyhow::anyhow!("{err}"))?;
-
 
         Ok(())
     }
@@ -164,7 +163,13 @@ impl AnalyzedAST {
             }
             ExprRefType::Flow(l, _t, _m, _r) => {
                 let val = self.build_expr(ctx, l)?;
-                if let VariableDefinition::Match { branches, patterns, ty, pred_ty } = &self.references[expr.ind().0] {
+                if let VariableDefinition::Match {
+                    branches,
+                    patterns,
+                    ty,
+                    pred_ty,
+                } = &self.references[expr.ind().0]
+                {
                     self.build_match(ctx, val, &branches, &patterns, ty, pred_ty)?
                 } else {
                     unimplemented!();
@@ -233,7 +238,10 @@ impl AnalyzedAST {
 
         let curr_block = ctx.builder.get_insert_block().unwrap();
 
-        let unreachable_block = ctx.module.get_context().insert_basic_block_after(curr_block, "match.unreachable");
+        let unreachable_block = ctx
+            .module
+            .get_context()
+            .insert_basic_block_after(curr_block, "match.unreachable");
         ctx.builder.position_at_end(unreachable_block);
         ctx.builder.build_unreachable()?;
 
@@ -241,7 +249,6 @@ impl AnalyzedAST {
             .module
             .get_context()
             .insert_basic_block_after(curr_block, "match.end");
-
 
         ctx.builder.position_at_end(end_block);
         let phi = ctx
@@ -280,11 +287,23 @@ impl AnalyzedAST {
         let ref mut empty_blocks = vec![];
 
         ctx.builder.position_at_end(curr_block);
-        self.build_match_branch(ctx, val, &blocks, patterns.elements.iter(), &patterns.branches, pred_ty, &(0..patterns.branches.len()).collect_vec(), unreachable_block, empty_blocks)?;
+        self.build_match_branch(
+            ctx,
+            val,
+            &blocks,
+            patterns.elements.iter(),
+            &patterns.branches,
+            pred_ty,
+            &(0..patterns.branches.len()).collect_vec(),
+            unreachable_block,
+            empty_blocks,
+        )?;
 
         for (from, to) in empty_blocks {
             from.replace_all_uses_with(to);
-            unsafe { from.delete().unwrap(); }
+            unsafe {
+                from.delete().unwrap();
+            }
         }
 
         ctx.builder.position_at_end(end_block);
@@ -314,8 +333,7 @@ impl AnalyzedAST {
                     empty_blocks.push((block, expr));
                 }
 
-                ctx.builder
-                    .build_unconditional_branch(expr)?;
+                ctx.builder.build_unconditional_branch(expr)?;
             };
         }
 
@@ -412,7 +430,6 @@ impl AnalyzedAST {
         redirect!(else_br);
         Ok(())
     }
-
 }
 
 #[derive(Debug)]

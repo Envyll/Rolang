@@ -1,4 +1,4 @@
-use crate::lexer::{ Token, TokenType};
+use crate::lexer::{Token, TokenType};
 use crate::parser::parser_state::ParserState;
 use crate::parser::{ASTErr, ASTExpr, ExprInd};
 
@@ -21,16 +21,12 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let this = self;
         use TokenType::*;
         let ty = &this.current().unwrap().ty;
-        if matches!(ty, 
-            Open(_, _)
-            | Symbol(..)
-            | Number { .. }
-            | String { .. }
-            | Character { .. })
-            || matches!(ty,
-                | Keyword(n) if n == "_"
-            ) 
-        {
+        if matches!(
+            ty,
+            Open(_, _) | Symbol(..) | Number { .. } | String { .. } | Character { .. }
+        ) || matches!(ty,
+            | Keyword(n) if n == "_"
+        ) {
             *this <<= move |this| {
                 if this.try_parse_brackets().is_none() {
                     let ind = this.curr_token_ind;

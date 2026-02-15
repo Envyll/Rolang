@@ -1,12 +1,11 @@
 use super::Result;
+use inkwell::OptimizationLevel;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::targets::{InitializationConfig, Target};
-use inkwell::OptimizationLevel;
+use rolang::AResult;
 use rolang::lexer::TokenIterator;
 use rolang::semantics::AnalyzedAST;
-use rolang::AResult;
-
 
 pub(super) fn generate(str: &str, module: &Module) -> AResult {
     let ast = TokenIterator::new(str).normalize().parse();
@@ -22,7 +21,8 @@ fn test_generation() -> Result<()> {
     let context = Context::create();
     let module = context.create_module("");
 
-    generate(r#"
+    generate(
+        r#"
 
     f a b := a + b
 
@@ -39,27 +39,28 @@ fn test_generation() -> Result<()> {
 
     ## multiply by 6
     i i := (i := (i := i + i; i := i + i; i) + i; i) + i
-    "#, &module)?;
+    "#,
+        &module,
+    )?;
     let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;
 
-    let f = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64) -> u64>("f") }?;
+    let f = unsafe { engine.get_function::<unsafe extern "C" fn(u64, u64) -> u64>("f") }?;
 
-    assert_eq!(dbg!(unsafe {f.call(0, 1)}), 1);
-    assert_eq!(dbg!(unsafe {f.call(3, 5)}), 8);
+    assert_eq!(dbg!(unsafe { f.call(0, 1) }), 1);
+    assert_eq!(dbg!(unsafe { f.call(3, 5) }), 8);
 
+    let g = unsafe { engine.get_function::<unsafe extern "C" fn(u64, u64) -> u64>("g") }?;
 
-    let g = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64) -> u64>("g") }?;
+    assert_eq!(dbg!(unsafe { g.call(3, 3) }), 0);
+    assert_eq!(dbg!(unsafe { g.call(5, 3) }), 16);
 
-    assert_eq!(dbg!(unsafe {g.call(3, 3)}), 0);
-    assert_eq!(dbg!(unsafe {g.call(5, 3)}), 16);
+    let h = unsafe { engine.get_function::<unsafe extern "C" fn(u64, u64, u64, u64) -> u64>("h") }?;
 
-    let h = unsafe{engine.get_function::<unsafe extern "C" fn (u64, u64, u64, u64) -> u64>("h") }?;
+    assert_eq!(dbg!(unsafe { h.call(4, 9, 5, 42) }), 1);
 
-    assert_eq!(dbg!(unsafe {h.call(4, 9, 5, 42)}), 1);
-    
-    let i = unsafe{engine.get_function::<unsafe extern "C" fn (u64) -> u64>("i") }?;
+    let i = unsafe { engine.get_function::<unsafe extern "C" fn(u64) -> u64>("i") }?;
 
-    assert_eq!(dbg!(unsafe {i.call(6)}), 36);
+    assert_eq!(dbg!(unsafe { i.call(6) }), 36);
 
     Ok(())
 }

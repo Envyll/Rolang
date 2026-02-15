@@ -1,17 +1,22 @@
 use rolang::lexer::*;
 
 fn lex(src: &str) -> Vec<TokenType> {
-    dbg!(TokenIterator::new(src)
-        .map(|tok| tok.ty)
-        .skip_while(|tok| matches!(tok, TokenType::Indent(_)))
-        .collect())
+    dbg!(
+        TokenIterator::new(src)
+            .map(|tok| tok.ty)
+            .skip_while(|tok| matches!(tok, TokenType::Indent(_)))
+            .collect()
+    )
 }
 
 fn lex_one(src: &str) -> TokenType {
-     dbg!(TokenIterator::new(src)
-        .map(|tok| tok.ty)
-        .skip_while(|tok| matches!(tok, TokenType::Indent(_)))
-        .next().unwrap())
+    dbg!(
+        TokenIterator::new(src)
+            .map(|tok| tok.ty)
+            .skip_while(|tok| matches!(tok, TokenType::Indent(_)))
+            .next()
+            .unwrap()
+    )
 }
 
 #[test]
@@ -173,14 +178,20 @@ fn test_braces() {
     assert_eq!(
         lex("[]"),
         [
-            Open(BracketType::Square { with_stick: false }, SymbolType::Default),
+            Open(
+                BracketType::Square { with_stick: false },
+                SymbolType::Default
+            ),
             Close(BracketType::Square { with_stick: false })
         ]
     );
     assert_eq!(
         lex("'[| |]"),
         [
-            Open(BracketType::Square { with_stick: true }, SymbolType::Generic),
+            Open(
+                BracketType::Square { with_stick: true },
+                SymbolType::Generic
+            ),
             Close(BracketType::Square { with_stick: true })
         ]
     );
@@ -194,14 +205,20 @@ fn test_braces() {
     assert_eq!(
         lex("｟〗"),
         [
-            Open(BracketType::NonAscii { with_stick: false }, SymbolType::Default),
+            Open(
+                BracketType::NonAscii { with_stick: false },
+                SymbolType::Default
+            ),
             Close(BracketType::NonAscii { with_stick: false })
         ]
     );
     assert_eq!(
         lex("$[== ==]"),
         [
-            Open(BracketType::Square { with_stick: false }, SymbolType::Borrow),
+            Open(
+                BracketType::Square { with_stick: false },
+                SymbolType::Borrow
+            ),
             Operator,
             Operator,
             Close(BracketType::Square { with_stick: false })
@@ -210,7 +227,10 @@ fn test_braces() {
     assert_eq!(
         lex("⁅|abc|⁆"),
         [
-            Open(BracketType::NonAscii { with_stick: true }, SymbolType::Default),
+            Open(
+                BracketType::NonAscii { with_stick: true },
+                SymbolType::Default
+            ),
             Symbol("abc".into(), SymbolType::Default),
             Close(BracketType::NonAscii { with_stick: true })
         ]
@@ -218,7 +238,10 @@ fn test_braces() {
     assert_eq!(
         lex("【|||】"),
         [
-            Open(BracketType::NonAscii { with_stick: true }, SymbolType::Default),
+            Open(
+                BracketType::NonAscii { with_stick: true },
+                SymbolType::Default
+            ),
             Operator,
             Close(BracketType::NonAscii { with_stick: true })
         ]
@@ -230,7 +253,10 @@ fn test_braces() {
             Operator,
             Close(BracketType::NonAscii { with_stick: true }),
             Operator,
-            Open(BracketType::NonAscii { with_stick: true }, SymbolType::Default),
+            Open(
+                BracketType::NonAscii { with_stick: true },
+                SymbolType::Default
+            ),
             Operator,
         ]
     );
@@ -238,7 +264,10 @@ fn test_braces() {
         lex("©｟`日"),
         [
             Operator,
-            Open(BracketType::NonAscii { with_stick: false }, SymbolType::Default),
+            Open(
+                BracketType::NonAscii { with_stick: false },
+                SymbolType::Default
+            ),
             Lifetime,
         ]
     );
@@ -247,11 +276,14 @@ fn test_braces() {
 #[test]
 fn numbers() {
     let lexed = lex("2.2.2?.2");
-    assert!(matches!(lexed.as_slice(), [
-        TokenType::Number {..},
-        TokenType::Operator {..},
-        TokenType::Symbol {..},
-        TokenType::Operator {..},
-        TokenType::Symbol {..},
-    ]))
+    assert!(matches!(
+        lexed.as_slice(),
+        [
+            TokenType::Number { .. },
+            TokenType::Operator { .. },
+            TokenType::Symbol { .. },
+            TokenType::Operator { .. },
+            TokenType::Symbol { .. },
+        ]
+    ))
 }

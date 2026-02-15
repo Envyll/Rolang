@@ -1,7 +1,7 @@
 use crate::lexer::Token;
+use crate::parser::ASTErr::UnexpectedComma;
 use crate::parser::parser_state::ParserState;
 use crate::parser::priority::{Priority, TokenClass};
-use crate::parser::ASTErr::UnexpectedComma;
 use crate::parser::{/*ASTErr,*/ ASTExpr, ExprInd, ExprVec, TokenInd};
 use std::cell::Cell;
 use std::rc::Rc;
@@ -12,8 +12,12 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         (curr.class(), curr.priority())
     }
 
-
-    pub fn try_parse_any(&mut self, min_priority: Priority, was_flow: bool, allow_prev_unary_right: bool) -> Option<()> {
+    pub fn try_parse_any(
+        &mut self,
+        min_priority: Priority,
+        was_flow: bool,
+        allow_prev_unary_right: bool,
+    ) -> Option<()> {
         let pr = self.current().unwrap().priority();
 
         if min_priority == Priority::Path
@@ -52,10 +56,11 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let is_anything = Rc::new(Cell::new(None));
         let is_anything2 = is_anything.clone();
 
-
         if pr.0 >= min_priority {
             if min_priority < pr.1 && class != TokenClass::FlowOp {
-                *this <<= move |this|  {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
+                *this <<= move |this| {
+                    this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)
+                }
             }
             *this <<= move |this| {
                 let prev = this.expressions_len().prev().unwrap();
@@ -69,9 +74,11 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                     }
                     (TokenClass::FlowKw, true) => {
                         if let Some(prev) = this.is_prev_flow_br() {
-                            *this.prev_expr_mut().unwrap() = ASTExpr::Flow(left, ind, None, prev.clone());
+                            *this.prev_expr_mut().unwrap() =
+                                ASTExpr::Flow(left, ind, None, prev.clone());
                         } else if let Some((mhs, rhs)) = this.is_prev_flow_op() {
-                            *this.prev_expr_mut().unwrap() = ASTExpr::Flow(left, ind, mhs, rhs.clone());
+                            *this.prev_expr_mut().unwrap() =
+                                ASTExpr::Flow(left, ind, mhs, rhs.clone());
                         } else {
                             *this += ASTExpr::Flow(left, ind, None, [prev].into());
                         }
@@ -116,15 +123,21 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 };
             };
             this.advance();
-            is_anything2.set(this.try_parse_any(pr.1, matches!(class, TokenClass::FlowOp | TokenClass::FlowKw), matches!(class, TokenClass::Comma) ));
+            is_anything2.set(this.try_parse_any(
+                pr.1,
+                matches!(class, TokenClass::FlowOp | TokenClass::FlowKw),
+                matches!(class, TokenClass::Comma),
+            ));
         };
     }
 
     pub fn parse_binary(&mut self, left: ExprInd, min_priority: Priority) {
         let this = self;
 
-        *this <<= move |this| {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)};
-        *this <<= move |this| {this.parse_apply_or_stop(this.expressions_len().prev().unwrap(),)};
+        *this <<= move |this| {
+            this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)
+        };
+        *this <<= move |this| this.parse_apply_or_stop(this.expressions_len().prev().unwrap());
         this.parse_path_or_stop(left)
     }
 
@@ -136,18 +149,16 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let is_anything2 = is_anything.clone();
 
         if min_priority < pr_right && class != TokenClass::FlowOp {
-            *this <<= move |this| {this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)}
+            *this <<= move |this| {
+                this.parse_binary_relaxed(this.expressions_len().prev().unwrap(), min_priority)
+            }
         }
         *this <<= move |this| {
             let expr_len = this.expressions_len();
 
             match (class, is_anything.get().is_some()) {
-                (TokenClass::None, true) => {
-                    *this += ASTExpr::Unary(ind, expr_len.prev().unwrap())
-                }
-                (TokenClass::None, false) => {
-                    *this += ASTExpr::Simple(ind,)
-                }
+                (TokenClass::None, true) => *this += ASTExpr::Unary(ind, expr_len.prev().unwrap()),
+                (TokenClass::None, false) => *this += ASTExpr::Simple(ind),
                 (TokenClass::FlowKw | TokenClass::FlowOp, true) => {
                     if let Some(prev) = this.is_prev_flow_br() {
                         *this.prev_expr_mut().unwrap() = ASTExpr::UnFlow(ind, None, prev.clone());
@@ -165,22 +176,24 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                     *this /= UnexpectedComma;
                 }
                 (TokenClass::Comma, false) => {
-                    *this += ASTExpr::Simple(ind,);
+                    *this += ASTExpr::Simple(ind);
                     *this /= UnexpectedComma;
                 }
                 (TokenClass::Stick, true) => {
                     if let Some(_prev) = this.try_get_prev_either() {
                         //do nothing
                     } else {
-                        *this += ASTExpr::Either(Rc::new(vec![expr_len.prev().unwrap()].into()) )
+                        *this += ASTExpr::Either(Rc::new(vec![expr_len.prev().unwrap()].into()))
                     }
                 }
-                (TokenClass::Stick, false) => {
-                    *this += ASTExpr::Simple(ind,)
-                }
+                (TokenClass::Stick, false) => *this += ASTExpr::Simple(ind),
             };
         };
         this.advance();
-        is_anything2.set(this.try_parse_any(pr_right, matches!(class, TokenClass::FlowKw | TokenClass::FlowOp), false));
+        is_anything2.set(this.try_parse_any(
+            pr_right,
+            matches!(class, TokenClass::FlowKw | TokenClass::FlowOp),
+            false,
+        ));
     }
 }

@@ -62,20 +62,30 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                 for (i, f) in fns.into_iter().enumerate() {
                     f(&ast, exprs[i]);
                 }
-            },
+            }
             ASTExpr::Flow(lhs, tok, mhs, ref rhs) => {
-                assert_eq!(len, rhs.len() + 1 + mhs.is_some() as usize, "fail at flow({})", &ast[tok].slice);
+                assert_eq!(
+                    len,
+                    rhs.len() + 1 + mhs.is_some() as usize,
+                    "fail at flow({})",
+                    &ast[tok].slice
+                );
                 let mut fns = fns.into_iter();
                 fns.next().unwrap()(ast, lhs);
                 if let Some(mhs) = mhs {
                     fns.next().unwrap()(ast, mhs);
-                }                
+                }
                 for (i, f) in fns.enumerate() {
                     f(&ast, rhs[i]);
                 }
-            },
+            }
             ASTExpr::UnFlow(tok, mhs, ref rhs) => {
-                assert_eq!(len, rhs.len() + mhs.is_some() as usize, "fail at un_flow({})", &ast[tok].slice);
+                assert_eq!(
+                    len,
+                    rhs.len() + mhs.is_some() as usize,
+                    "fail at un_flow({})",
+                    &ast[tok].slice
+                );
                 let mut fns = fns.into_iter();
                 if let Some(mhs) = mhs {
                     fns.next().unwrap()(ast, mhs);
@@ -83,19 +93,19 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                 for (i, f) in fns.enumerate() {
                     f(&ast, rhs[i]);
                 }
-            },
+            }
             ASTExpr::Tuple(ref exprs) => {
                 assert_eq!(len, exprs.len(), "fail at tuple({})", exprs.len());
                 for (i, f) in fns.into_iter().enumerate() {
                     f(&ast, exprs[i]);
                 }
-            },
+            }
             ASTExpr::Either(ref exprs) => {
                 assert_eq!(len, exprs.len(), "fail at either({})", exprs.len());
                 for (i, f) in fns.into_iter().enumerate() {
                     f(&ast, exprs[i]);
                 }
-            },
+            }
         }
     }
 }
@@ -164,7 +174,8 @@ fn test_def() {
 
 #[test]
 fn test_flow() {
-    test_parse("
+    test_parse(
+        "
         [] then n:{
             n
         }
@@ -186,30 +197,33 @@ fn test_flow() {
         a b := a match
             a : a
     ",
-   test_nodes![
-       {[][][]}
-       {[][][]}
-       {{[][]}}
-       {[]{}}
-       {{{[]{}}}}
+        test_nodes![
+           {[][][]}
+           {[][][]}
+           {{[][]}}
+           {[]{}}
+           {{{[]{}}}}
 
-       {[][][]}
-       {[][]}
-       {[][]}
-       {[][]}
+           {[][][]}
+           {[][]}
+           {[][]}
+           {[][]}
 
-       {[]}
-       {[] {[]} {[]}}
-       {{[] []} {[] {[] []}}}
-    ]
+           {[]}
+           {[] {[]} {[]}}
+           {{[] []} {[] {[] []}}}
+        ],
     )
 }
 
 #[test]
 fn test_tuples() {
-    test_parse("
+    test_parse(
+        "
         a, b  | c, d..e, f, | g, h, i,
-    ", test_nodes![
-        [([][]) ([][[][]][]) ([][][]) ]
-    ])
+    ",
+        test_nodes![
+            [([][]) ([][[][]][]) ([][][]) ]
+        ],
+    )
 }

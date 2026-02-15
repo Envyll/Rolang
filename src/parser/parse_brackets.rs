@@ -52,7 +52,9 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             // ( _?_
             let TokenType::Close(br_ty_cl) = sep_tok.ty else {
                 // ( ;
-                if let TokenType::Semicolon = sep_tok.ty {this.advance()}
+                if let TokenType::Semicolon = sep_tok.ty {
+                    this.advance()
+                }
                 this.parse_br_member(br_ty, exprs, op_ind);
                 return;
             };
@@ -76,16 +78,22 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             this.advance();
             // (<indent> <dedent>)
             'indented: {
-                let [expr] = exprs.as_slice() else {break 'indented};
-                let 1 = this.expressions_len().0 - expr.0 else {break 'indented};
-                let Some(exprs) = this.is_prev_indent_br() else {break 'indented};
+                let [expr] = exprs.as_slice() else {
+                    break 'indented;
+                };
+                let 1 = this.expressions_len().0 - expr.0 else {
+                    break 'indented;
+                };
+                let Some(exprs) = this.is_prev_indent_br() else {
+                    break 'indented;
+                };
                 *this.prev_expr_mut().unwrap() = ASTExpr::Braced(op_ind, exprs.clone(), cl_ind);
                 return;
             };
             *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
-            
+
             // end
         };
-        *this <<= move |this| {isnt_empty2.set(this.try_parse_any(Priority::Or, false, false))}
+        *this <<= move |this| isnt_empty2.set(this.try_parse_any(Priority::Or, false, false))
     }
 }

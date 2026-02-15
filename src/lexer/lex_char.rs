@@ -1,7 +1,7 @@
-use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
 use crate::lexer::lex::{is_alnum, skip_while_alnum};
-use crate::lexer::{CharErrorFlags, State, SymbolType, Token, TokenIterator, TokenType};
 use crate::lexer::lex_open::lex_open;
+use crate::lexer::{CharErrorFlags, State, SymbolType, Token, TokenIterator, TokenType};
+use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
 
 pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
     let row = it.row;
@@ -19,19 +19,19 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
     };
 
     let prefix_len = quo_num - num;
-    let it_clone = it.clone();
+    let _it_clone = it.clone();
     macro_rules! undo {
         () => {{
-            *it = it_clone;
+            *it = _it_clone;
             let slice = line.slice(start.num..quo_num);
-            Token{
+            Token {
                 ty: TokenType::Symbol(slice.clone(), SymbolType::Default),
                 slice,
                 row,
                 col,
                 num,
             }
-        }}
+        }};
     }
     macro_rules! slice_end {
         () => {{
@@ -186,10 +186,10 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
             }
         }
         // '…
-        (_, true, _) if prefix_len == 0  => {
+        (_, true, _) if prefix_len == 0 => {
             let slice_end = slice_end!();
             let slice = line.slice(num..slice_end);
-            Token{
+            Token {
                 ty: TokenType::Symbol(slice.clone(), SymbolType::Generic),
                 slice,
                 row,
@@ -200,7 +200,7 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
         // …'…
         (_, true, _) => {
             undo!()
-        },
+        }
 
         _ => {
             it.next_char();
@@ -231,8 +231,9 @@ pub fn lex_char(it: &mut TokenIterator, start: State) -> Token {
             // …'.
             } else {
                 // …'(
-                if let GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation
-                    = fst_char.general_category() {
+                if let GeneralCategory::OpenPunctuation | GeneralCategory::InitialPunctuation =
+                    fst_char.general_category()
+                {
                     if prefix_len == 0 {
                         undo!();
                         it.next_char();

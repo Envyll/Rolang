@@ -1,7 +1,7 @@
 use crate::lexer::TokenType::{Error, Keyword, Symbol};
 use crate::lexer::lex_char::lex_char;
 use crate::lexer::lex_string::lex_string;
-use crate::lexer::{State, Token, TokenIterator, is_keyword, skip_while_alnum, SymbolType};
+use crate::lexer::{State, SymbolType, Token, TokenIterator, is_keyword, skip_while_alnum};
 
 pub fn lex_symbol(it: &mut TokenIterator) -> Token {
     let Some(start @ State { num, col, char: _ }) = it.current else {

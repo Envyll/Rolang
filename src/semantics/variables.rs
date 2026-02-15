@@ -1,11 +1,11 @@
-use std::cell::OnceCell;
-use std::rc::Rc;
-use derivative::Derivative;
 use crate::ImStr;
 use crate::parser::ExprInd;
-use crate::semantics::patterns::{ PatternTable};
-use crate::semantics::types::RoType;
 use crate::semantics::VariablesContext;
+use crate::semantics::patterns::PatternTable;
+use crate::semantics::types::RoType;
+use derivative::Derivative;
+use std::cell::OnceCell;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, Derivative)]
 #[derivative(Eq, Hash, PartialEq)]
@@ -20,11 +20,11 @@ pub struct FunctionDefinition {
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Derivative)]
 #[derivative(Eq, Hash, PartialEq)]
-pub enum VariableDefinition{
+pub enum VariableDefinition {
     #[default]
     None,
     Function(ImStr),
-    Variable{
+    Variable {
         name: ImStr,
         place: ExprInd,
         #[derivative(PartialEq = "ignore", Hash = "ignore")]
@@ -49,17 +49,14 @@ pub enum VariableDefinition{
         pred_ty: RoType,
     },
 
-    Tuple(
-        #[derivative(PartialEq = "ignore", Hash = "ignore")]
-        Vec<RoType>
-    ),
+    Tuple(#[derivative(PartialEq = "ignore", Hash = "ignore")] Vec<RoType>),
     Member(u32),
 
     Unknown,
 }
 
 impl VariableDefinition {
-    pub fn ty(&self) -> RoType{
+    pub fn ty(&self) -> RoType {
         match self {
             VariableDefinition::None => {
                 unimplemented!()
@@ -67,21 +64,13 @@ impl VariableDefinition {
             VariableDefinition::Function(_) => {
                 unimplemented!()
             }
-            VariableDefinition::Variable { ty, .. } => {
-                ty.clone()
-            }
+            VariableDefinition::Variable { ty, .. } => ty.clone(),
             VariableDefinition::Special(_) => {
                 unimplemented!()
             }
-            VariableDefinition::Number(_) => {
-                RoType::Int
-            }
-            VariableDefinition::Match{ty, ..} => {
-                ty.clone()
-            }
-            VariableDefinition::Tuple(ty) => {
-                RoType::Tuple(ty.clone())
-            }
+            VariableDefinition::Number(_) => RoType::Int,
+            VariableDefinition::Match { ty, .. } => ty.clone(),
+            VariableDefinition::Tuple(ty) => RoType::Tuple(ty.clone()),
             VariableDefinition::Unknown => {
                 unimplemented!()
             }

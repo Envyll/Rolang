@@ -9,8 +9,6 @@ pub enum TokenClass {
     Stick,
 }
 
-
-
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Close, // ) ] ; …
@@ -134,19 +132,24 @@ impl Token {
             TokenType::Indent(_) => unreachable!(),
             TokenType::Error => (Apply, Path),
             TokenType::Lifetime => (Path, Path),
-            TokenType::OrStick => (Priority::Pipe, Priority::Pipe)
+            TokenType::OrStick => (Priority::Pipe, Priority::Pipe),
         }
     }
 
     pub fn class(&self) -> TokenClass {
         match self.ty {
-            TokenType::Keyword(ref x) if matches!(x.as_str(),
-                "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else" | "match"
-            ) => TokenClass::FlowKw,
+            TokenType::Keyword(ref x)
+                if matches!(
+                    x.as_str(),
+                    "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else" | "match"
+                ) =>
+            {
+                TokenClass::FlowKw
+            }
             TokenType::Colon | TokenType::ColonColonEq | TokenType::ColonEq => TokenClass::FlowOp,
             TokenType::Comma => TokenClass::Comma,
             TokenType::OrStick => TokenClass::Stick,
-            _ => TokenClass::None
+            _ => TokenClass::None,
         }
     }
 

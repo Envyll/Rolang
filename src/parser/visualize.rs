@@ -1,4 +1,4 @@
-use crate::parser::{ASTExpr, ExprInd, AST};
+use crate::parser::{AST, ASTExpr, ExprInd};
 
 pub fn visualize_ast_full(ast: &AST) -> String {
     let mut output = String::new();
