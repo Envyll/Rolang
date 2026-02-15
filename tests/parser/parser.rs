@@ -90,6 +90,12 @@ fn test_parse_node(fns: Vec<Box<dyn FnOnce(&AST, ExprInd)>>) -> impl FnOnce(&AST
                     f(&ast, exprs[i]);
                 }
             },
+            ASTExpr::Either(ref exprs) => {
+                assert_eq!(len, exprs.len(), "fail at either({})", exprs.len());
+                for (i, f) in fns.into_iter().enumerate() {
+                    f(&ast, exprs[i]);
+                }
+            },
         }
     }
 }
@@ -172,6 +178,13 @@ fn test_flow() {
         a then: c
         a then c
         a then {c}
+
+        a match {}
+        a match
+            a: {}
+            b: {}
+        a b := a match
+            a : a
     ",
    test_nodes![
        {[][][]}
@@ -184,6 +197,10 @@ fn test_flow() {
        {[][]}
        {[][]}
        {[][]}
+
+       {[]}
+       {[] {[]} {[]}}
+       {{[] []} {[] {[] []}}}
     ]
     )
 }
@@ -193,6 +210,6 @@ fn test_tuples() {
     test_parse("
         a, b  | c, d..e, f, | g, h, i,
     ", test_nodes![
-        [[([][]) ([][[][]][])] ([][][]) ]
+        [([][]) ([][[][]][]) ([][][]) ]
     ])
 }

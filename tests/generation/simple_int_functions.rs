@@ -1,16 +1,18 @@
-
-
-use inkwell::builder::BuilderError;
+use super::Result;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::OptimizationLevel;
 use inkwell::targets::{InitializationConfig, Target};
+use inkwell::OptimizationLevel;
 use rolang::lexer::TokenIterator;
 use rolang::semantics::AnalyzedAST;
-use rolang::Result;
+use rolang::AResult;
 
-pub(super) fn generate(str: &str, module: &Module) -> Result<(), BuilderError> {
-    AnalyzedAST::new(TokenIterator::new(str).normalize().parse()).build_module(module)
+
+pub(super) fn generate(str: &str, module: &Module) -> AResult {
+    let ast = TokenIterator::new(str).normalize().parse();
+    //dbg!(ast);
+    //eprintln!("{}", visualize_ast(&ast));
+    AnalyzedAST::new(ast).build_module(module)
 }
 
 #[test]

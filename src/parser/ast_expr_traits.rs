@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ops::Deref;
 use crate::lexer::{SymbolType, Token, TokenType};
 use crate::parser::{ASTExpr, ExprInd, AST};
@@ -105,11 +106,19 @@ impl<'ctx> ExprRef<'ctx> {
         Some(expr)
     }
 
-    pub fn ty(self) -> ExprRefType<'ctx, impl Iterator<Item=ExprRef<'ctx>> + 'ctx> {
+    pub fn ty(self) -> ExprRefType<
+        'ctx,
+        impl DoubleEndedIterator<Item=ExprRef<'ctx>> + ExactSizeIterator + 'ctx,
+        impl DoubleEndedIterator<Item=ExprRef<'ctx>> + ExactSizeIterator + 'ctx,
+    > {
         let at = |&e| self.ctx.at(e);
         let atm = |e: &Option<_>| e.map(|e| self.ctx.at(e));
-        let atb = |(left, right): (&'ctx [ExprInd], &'ctx [ExprInd])| left.into_iter().chain(right).map(|&e| self.ctx.at(e));
-        let att = |slice: &'ctx [ExprInd]| atb((&slice[0..0], slice));
+        let att = |slice: &'ctx [ExprInd]| slice
+            .into_iter()
+            .map(|&e| self.ctx.at(e));
+        let atb = |con: &'ctx VecDeque<_>| con
+            .into_iter()
+            .map(|&e| self.ctx.at(e));
         let tok = |&i| &self.ctx[i];
         
         match &self.expr {
@@ -122,30 +131,31 @@ impl<'ctx> ExprRef<'ctx> {
             Braced(l, m, r) => ExprRefType::Braced(tok(l), att(m), tok(r)),
             Flow(l, t, m, r) => ExprRefType::Flow(at(l), tok(t), atm(m), att(r)),
             UnFlow(t, m, r) => ExprRefType::UnFlow(tok(t), atm(m), att(r)),
-            Tuple(m) => ExprRefType::Tuple(atb(m.as_slices())),
+            Tuple(m) => ExprRefType::Tuple(atb(m)),
+            Either(m) => ExprRefType::Either(atb(m)),
         }
     }
 }
 
 impl<'ctx> IntoIterator for ExprRef<'ctx> {
     type Item = Self;
-    type IntoIter = Box<dyn Iterator<Item=Self> + 'ctx>;
+    type IntoIter = Box<dyn DoubleEndedIterator<Item=Self> + 'ctx>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self.expr { 
-            Empty | Simple(_) => Box::new(None.into_iter()),
-            &Unary(_, r) => Box::new(Some(self.ctx.at(r)).into_iter()),
-            &Binary(l, _, r) => Box::new(Some(l).into_iter().chain(Some(r)).map(|e| self.ctx.at(e))),
-            &Path(ref l, ref n) => Box::new(Some(l).into_iter().chain(n.iter()).map(|e| self.ctx.at(*e))),
+            Empty | Simple(_) => Box::new([].into_iter()),
+            &Unary(_, r) => Box::new([self.ctx.at(r)].into_iter()),
+            &Binary(l, _, r) => Box::new([l].into_iter().chain([r]).map(|e| self.ctx.at(e))),
+            &Path(ref l, ref n) => Box::new([l].into_iter().chain(n.iter()).map(|e| self.ctx.at(*e))),
             &Apply(ref n) | &Braced(_, ref n, _) => Box::new(n.into_iter().map(|e| self.ctx.at(*e))),
-            &Flow(l, _, m, ref r) => Box::new(Some(l).into_iter().chain(m.into_iter()).chain(r.iter().map(|e| *e)).map(|e| self.ctx.at(e)) ),
+            &Flow(l, _, m, ref r) => Box::new([l].into_iter().chain(m.into_iter()).chain(r.iter().map(|e| *e)).map(|e| self.ctx.at(e)) ),
             &UnFlow(_, m, ref r) => Box::new(m.into_iter().chain(r.iter().map(|&e|e)).map(|e| self.ctx.at(e))),
-            &Tuple(ref n) => Box::new(n.iter().map(|&e| self.ctx.at(e))),
+            &Tuple(ref n) | &Either(ref n) => Box::new(n.iter().map(|&e| self.ctx.at(e))),
         }
     }
 }
 
-pub enum ExprRefType<'ctx, Iter: Iterator<Item=ExprRef<'ctx>> + 'ctx> {
+pub enum ExprRefType<'ctx, Iter, Iter2> {
     Empty,
     Simple(&'ctx Token),
     Unary(&'ctx Token, ExprRef<'ctx>),
@@ -155,5 +165,6 @@ pub enum ExprRefType<'ctx, Iter: Iterator<Item=ExprRef<'ctx>> + 'ctx> {
     Braced(&'ctx Token, Iter, &'ctx Token, ),
     Flow(ExprRef<'ctx>, &'ctx Token, Option<ExprRef<'ctx>>, Iter),
     UnFlow(&'ctx Token, Option<ExprRef<'ctx>>, Iter),
-    Tuple(Iter),
+    Tuple(Iter2),
+    Either(Iter2),
 }

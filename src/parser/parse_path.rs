@@ -1,7 +1,6 @@
 use crate::lexer::{ Token, TokenType};
 use crate::parser::parser_state::ParserState;
 use crate::parser::{ASTErr, ASTExpr, ExprInd};
-use crate::push_fn;
 
 impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn parse_path(&mut self, left: ExprInd) {
@@ -32,7 +31,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
                 | Keyword(n) if n == "_"
             ) 
         {
-            push_fn! {this =>
+            *this <<= move |this| {
                 if this.try_parse_brackets().is_none() {
                     let ind = this.curr_token_ind;
                     this.advance();
@@ -48,7 +47,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
     pub fn parse_atomic(&mut self) {
         let this = self;
         this.try_parse_atomic().unwrap_or_else(|| {
-            push_fn! {this =>
+            *this <<= move |this| {
                 *this += ASTExpr::Empty;
                 *this /= ASTErr::NotAtomic;
             }
@@ -60,10 +59,10 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
 
         if let TokenType::ColonColon = this.current().unwrap().ty {
             this.advance();
-            push_fn! {this =>
+            *this <<= move |this| {
                 frags.push(this.expressions_len().prev().unwrap());
                 this.parse_path_step(left, frags);
-            }
+            };
             this.parse_atomic();
         } else {
             *this += ASTExpr::Path(left, frags.into());

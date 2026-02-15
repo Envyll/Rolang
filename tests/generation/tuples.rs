@@ -6,7 +6,7 @@ use crate::generation::simple_int_functions::generate;
 
 #[test]
 #[ignore] //todo: next step
-fn test_tuples() -> rolang::Result<()> {
+fn test_tuples() -> super::Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
     let context = Context::create();
@@ -63,7 +63,7 @@ fn test_tuples() -> rolang::Result<()> {
 
 
 #[test]
-fn test_tuples_creation() -> rolang::Result<()> {
+fn test_tuples_creation() -> super::Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
     let context = Context::create();

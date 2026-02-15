@@ -1,4 +1,4 @@
-use crate::lexer::TokenType::{Close, Colon, ColonColon, ColonColonEq, ColonEq, Operator};
+use crate::lexer::TokenType::{Close, Colon, ColonColon, ColonColonEq, ColonEq, Operator, OrStick};
 use crate::lexer::lex::skip_while_op;
 use crate::lexer::{BracketType, State, Token, TokenIterator};
 use unicode_properties::{GeneralCategory, UnicodeGeneralCategory};
@@ -80,6 +80,7 @@ pub fn lex_operator(it: &mut TokenIterator) -> Token {
     };
 
     let ty = match &slice as &str {
+        "|" => OrStick,
         ":" => Colon,
         "::" => ColonColon,
         ":=" => ColonEq,

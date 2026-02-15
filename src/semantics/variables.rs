@@ -3,7 +3,7 @@ use std::rc::Rc;
 use derivative::Derivative;
 use crate::ImStr;
 use crate::parser::ExprInd;
-use crate::semantics::patterns::Pattern;
+use crate::semantics::patterns::{ PatternTable};
 use crate::semantics::types::RoType;
 use crate::semantics::VariablesContext;
 
@@ -17,6 +17,7 @@ pub struct FunctionDefinition {
     pub return_type: Rc<OnceCell<RoType>>,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Default, Derivative)]
 #[derivative(Eq, Hash, PartialEq)]
 pub enum VariableDefinition{
@@ -34,13 +35,19 @@ pub enum VariableDefinition{
     Special(ImStr),
     Number(u64),
 
-    Match(
+    Match {
         #[derivative(PartialEq = "ignore", Hash = "ignore")]
-        Vec<(Pattern, ExprInd)>,
+        branches: Vec<ExprInd>,
 
         #[derivative(PartialEq = "ignore", Hash = "ignore")]
-        RoType
-    ),
+        patterns: PatternTable,
+
+        #[derivative(PartialEq = "ignore", Hash = "ignore")]
+        ty: RoType,
+
+        #[derivative(PartialEq = "ignore", Hash = "ignore")]
+        pred_ty: RoType,
+    },
 
     Tuple(
         #[derivative(PartialEq = "ignore", Hash = "ignore")]
@@ -69,7 +76,7 @@ impl VariableDefinition {
             VariableDefinition::Number(_) => {
                 RoType::Int
             }
-            VariableDefinition::Match(_, ty) => {
+            VariableDefinition::Match{ty, ..} => {
                 ty.clone()
             }
             VariableDefinition::Tuple(ty) => {

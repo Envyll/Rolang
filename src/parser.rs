@@ -48,6 +48,8 @@ impl Display for ExprInd {
     }
 }
 
+/// # plans
+/// Add attributes??
 #[derive(Clone, Debug)]
 pub enum ASTExpr {
     /// error in most cases
@@ -55,30 +57,48 @@ pub enum ASTExpr {
     /// `abc`
     Simple(TokenInd),
     /// `abc::def` `abc::def::ghi` `(A B)::C` `expression::('a := A; 'B := B; ?…)`
+    /// # Grammar:
+    /// ::= (Braced | Simple) (`::` Braced | Unary)+
     Path(ExprInd, ExprVec),
     /// `abc def …`
+    /// # Grammar:
+    /// path {2..}
+    /// # Plans
+    /// Maybe add separately: </br>
+    /// (Braced | Unary)+ `->` Expr
+    ///
+    /// Remove high priority operators??
     Apply(ExprVec),
     /// `+abc` …
+    /// ## Grammar:
+    /// op Expr
     Unary(TokenInd, ExprInd),
     /// `abc <| def` `abc + def` …
+    /// ## Grammar:
+    /// HigherPriorityExpr op (NotLowerPriorityExpr | Unary)
     Binary(ExprInd, TokenInd, ExprInd),
     /// `「abc; def」` `{abc}` `⟨|abc|⟩` `()` `{|abc|}` …
+    /// ## Grammar:
+    /// open `;`* (Expr `;`+)* Expr `;`* close
     Braced(TokenInd, ExprVec, TokenInd),
-    /// Examples\
+    /// # Examples:
     /// `abc or ghi` \
     /// `abc then def :{ghi; …}` \
-    /// Grammar:\
+    /// # Grammar:
     /// lhs op (pattern `:`)? (rhs| `\n` rhs* `\n` | `{` rhs* `}`)
     Flow(ExprInd, TokenInd, Option<ExprInd>, ExprVec),
-    /// Examples\
-    /// `return smth` \
-    /// `when ?last_arg: {…}`\
-    /// `a : b`\
-    /// `a := b`\
-    /// `a ::= b`
+    /// # Grammar:
+    /// ::= op (pattern `:`)? (rhs| `\n` rhs* `\n` | `{` rhs* `}`) <br/>
+    /// ::= pattern? (`:` | `:=` | `::=`) (rhs| `\n` rhs* `\n` | `{` rhs* `}` | `\n`)
     UnFlow(TokenInd, Option<ExprInd>, ExprVec),
     /// `a, b, c`
+    /// # Grammar:
+    /// ::= (Expr `,`)+ Expr?
     Tuple(Rc<VecDeque<ExprInd>>),
+    /// ` a | b | c`
+    /// # Grammar:
+    /// ::= (Expr `|`)+ | (Expr `|`)+ Expr | (`|` Expr)+
+    Either(Rc<VecDeque<ExprInd>>),
 }
 
 #[derive(Clone, Debug)]
@@ -99,6 +119,8 @@ pub enum ASTErr {
     NotAtomic,
     #[error("Unexpected `:`")]
     UnexpectedFlowOp,
+    #[error("Unexpected `,`")]
+    UnexpectedComma,
 }
 
 impl NormalizedTokenIterator {

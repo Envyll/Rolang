@@ -1,5 +1,16 @@
 use crate::lexer::{Token, TokenType};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenClass {
+    None,
+    FlowKw,
+    FlowOp,
+    Comma,
+    Stick,
+}
+
+
+
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Close, // ) ] ; …
@@ -74,6 +85,7 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
         return (Priority::Pow, Priority::Pow);
     }
 
+    // to/do : change
     if it.starts_with(['|', '&', '<', '>', '=', ':']) {
         return (Priority::Pipe, Priority::Tuple);
     }
@@ -122,15 +134,26 @@ impl Token {
             TokenType::Indent(_) => unreachable!(),
             TokenType::Error => (Apply, Path),
             TokenType::Lifetime => (Path, Path),
+            TokenType::OrStick => (Priority::Pipe, Priority::Pipe)
         }
     }
-    
+
+    pub fn class(&self) -> TokenClass {
+        match self.ty {
+            TokenType::Keyword(ref x) if matches!(x.as_str(),
+                "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else" | "match"
+            ) => TokenClass::FlowKw,
+            TokenType::Colon | TokenType::ColonColonEq | TokenType::ColonEq => TokenClass::FlowOp,
+            TokenType::Comma => TokenClass::Comma,
+            TokenType::OrStick => TokenClass::Stick,
+            _ => TokenClass::None
+        }
+    }
+
     pub fn is_flow_kw(&self) -> bool {
-        matches!(self.ty, TokenType::Keyword(ref x) if matches!(x.as_str(),
-            "and" | "then" | "for" | "when" | "while" | "type" | "or" | "else" | "match"
-        ))
+        self.class() == TokenClass::FlowKw
     }
     pub fn is_flow_op(&self) -> bool {
-        matches!(self.ty, TokenType::Colon | TokenType::ColonColonEq | TokenType::ColonEq)
+        self.class() == TokenClass::FlowOp
     }
 }

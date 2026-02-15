@@ -10,4 +10,6 @@ pub mod generation;
 
 type ImStrData = Rc<String>;
 pub type ImStr = ImString<ImStrData>;
-pub type Result<T, E = Box<dyn Error>> = core::result::Result<T, E>;
+
+pub use anyhow::Result;
+pub type AResult<T = ()> = Result<T>;

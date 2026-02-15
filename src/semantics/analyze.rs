@@ -1,4 +1,4 @@
-use crate::lexer::{BracketType, SymbolType, Token, TokenType};
+use crate::lexer::{SymbolType, Token, TokenType};
 use crate::parser::ast_expr_traits::{ExprRef, ExprRefType};
 use crate::parser::AST;
 use crate::semantics::types::RoType;
@@ -138,8 +138,8 @@ impl AnalyzerContext {
             }
             ExprRefType::Braced(t, n, _) => {
                 self.do_in_variables_scope(|this| {
-                    match t.ty {
-                        TokenType::Open(BracketType::Round { with_stick: false }, _) => {
+                    match t.slice.as_str() {
+                        "(" => {
                             let mut ty = RoType::unit();
 
                             for e in n {
@@ -159,11 +159,10 @@ impl AnalyzerContext {
                 })
             }
             ExprRefType::Flow(l, t, m, r) => {
-                self.analyze_expr(l);
-
                 if let TokenType::Keyword(kw) = &t.ty && kw == "match" && m.is_none() {
-                    self.analyze_match(expr, r)
+                    self.analyze_match(expr)
                 } else {
+                    let l_ty = self.analyze_expr(l);
                     self.errors[expr.ind().0] = AnalyzeErr::Unimplemented;
                     self.do_in_variables_scope(|this| {
                         if let Some(m) = m {
@@ -172,8 +171,8 @@ impl AnalyzerContext {
                         for e in r {
                             this.analyze_expr(e);
                         }
-                        RoType::Never
-                    })
+                    });
+                    l_ty
                 }
             }
             ExprRefType::UnFlow(t, m, r) => {
@@ -212,6 +211,13 @@ impl AnalyzerContext {
                 };
                 self.references[expr.ind().0] = VariableDefinition::Tuple(types.clone());
                 RoType::Tuple(types)
+            }
+            ExprRefType::Either(n) => {
+                for e in n {
+                    self.analyze_expr(e);
+                }
+                self.errors[expr.ind().0] = AnalyzeErr::Unimplemented;
+                RoType::Never
             }
         }
     }

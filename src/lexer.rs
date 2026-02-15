@@ -13,7 +13,8 @@ mod lex_string;
 mod lex_symbol;
 pub mod token_traits;
 mod lex_open;
-// mb migrate to &str instead of ImStr??
+
+// to/do: mb migrate to &str instead of ImStr??
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -28,12 +29,14 @@ pub struct Token {
     pub ty: TokenType,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TokenType {
     Open(BracketType, SymbolType),
     Close(BracketType),
     Operator,
     Comma,
+    OrStick,
     Semicolon,
     Colon,
     ColonEq,

@@ -113,6 +113,16 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let ASTExpr::Tuple(vec) = self.prev_expr_mut()? else {return None};
 
         Rc::get_mut(vec)
+            // must be unique
+            .unwrap().into()
+    }
+
+    pub fn try_get_prev_either(&mut self) -> Option<&mut VecDeque<ExprInd>> {
+        let ASTExpr::Either(vec) = self.prev_expr_mut()? else {return None};
+
+        Rc::get_mut(vec)
+            // must be unique
+            .unwrap().into()
     }
 }
 
@@ -134,27 +144,14 @@ impl<'a, IterT: Iterator<Item = Token>> AddAssign<ASTExpr> for ParserState<'a, I
 }
 
 impl<'a, IterT: Iterator<Item = Token>> DivAssign<ASTErr> for ParserState<'a, IterT> {
-    /// Pushes error for the next expression
+    /// Pushes error for the previous expression
     fn div_assign(&mut self, rhs: ASTErr) {
         let ind = self.expressions_len().prev().unwrap();
         if let Some(v) = self.errors.get_mut(&ind) {
             v.push(rhs);
         } else {
             self.errors
-                .insert(ExprInd(self.expressions.len()), vec![rhs]);
+                .insert(ind, vec![rhs]);
         }
     }
-}
-
-#[macro_export]
-macro_rules! push_fn {
-    {$this:ident => $($stmt:stmt;)*} => {
-        *$this <<= move |$this| {{$($stmt)*};}
-    };
-    {$this:ident.$f:ident($($args:expr),* $(,)?)} => {
-        *$this <<= move |$this| $this.$f($($args),*)
-    };
-    {$val:path = $this:ident.$f:ident($($args:expr),* $(,)?)} => {
-        *$this <<= move |$this| $val.set($this.$f($($args),*))
-    };
 }

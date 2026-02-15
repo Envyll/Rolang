@@ -11,6 +11,10 @@ path = "src/lib.rs"
 unicode-properties = "0.1.4"
 imstr = "0.2.0"
 bitflags = "2.10.0"
-thiserror = "2.0.17"
-inkwell = { version = "0.7.1", features = [ "llvm21-1" ] }
+thiserror = "2.0.18"
+inkwell = { version = "0.8.0", features = [ "llvm21-1" ] }
 derivative = "2.2.0"
+smallbitvec = "2.6.0"
+derive_more = { version = "2.1.1", features = ["full"] }
+anyhow = "1.0.101"
+itertools = "0.14.0"

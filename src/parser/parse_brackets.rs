@@ -2,7 +2,6 @@ use crate::lexer::{BracketType, Token, TokenType};
 use crate::parser::parser_state::ParserState;
 use crate::parser::priority::Priority;
 use crate::parser::{ASTErr, ASTExpr, ExprInd, TokenInd};
-use crate::push_fn;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -36,7 +35,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
         let isnt_empty = Rc::new(Cell::new(None));
         let isnt_empty2 = isnt_empty.clone();
 
-        push_fn! { this =>
+        *this <<= move |this| {
             let exprs_len = this.expressions_len();
             let cl_ind = this.curr_token_ind;
             // if were any expression, add it
@@ -86,7 +85,7 @@ impl<'a, IterT: Iterator<Item = Token>> ParserState<'a, IterT> {
             *this += ASTExpr::Braced(op_ind, exprs.into(), cl_ind);
             
             // end
-        }
-        push_fn! {isnt_empty2 = this.try_parse_any(Priority::Or, false, false)}
+        };
+        *this <<= move |this| {isnt_empty2.set(this.try_parse_any(Priority::Or, false, false))}
     }
 }

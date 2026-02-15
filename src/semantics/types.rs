@@ -1,8 +1,10 @@
 use derivative::Derivative;
+use derive_more::{IsVariant, TryUnwrap, Unwrap};
 use inkwell::context::ContextRef;
 use inkwell::types::BasicTypeEnum;
 
-#[derive(Clone, Debug, Derivative)]
+#[non_exhaustive]
+#[derive(Clone, Debug, Derivative, PartialEq, TryUnwrap, Unwrap, IsVariant)]
 #[derivative(Default)]
 pub enum RoType {
     Never,
@@ -14,6 +16,10 @@ pub enum RoType {
 impl RoType {
     pub fn unit() -> RoType {
         RoType::Tuple(Vec::new())
+    }
+
+    pub fn is_unit(&self) -> bool {
+        matches!(self, RoType::Tuple(n) if n.is_empty())
     }
 
     pub fn basic_type<'a>(&self, ctx: ContextRef<'a>) -> BasicTypeEnum<'a> {

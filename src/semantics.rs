@@ -1,8 +1,8 @@
 use crate::parser::AST;
-use crate::semantics::patterns::Pattern;
 pub(crate) use crate::semantics::variables::{FunctionDefinition, VariableDefinition};
 use crate::ImStr;
 use std::collections::HashMap;
+use crate::semantics::types::RoType;
 
 mod analyze;
 pub mod types;
@@ -36,6 +36,9 @@ pub enum AnalyzeErr {
     BadFnCall,
     RepeatedArg,
     BadPattern,
+    WrongPatternType{expected: RoType},
+    BadMatchBranch,
+    WrongMatchBranchType{expected: RoType, got: RoType},
     NotFullMatch,
 }
 
