@@ -1,8 +1,8 @@
-# About
+## About
 
-A project of a language made for fun (+ i wanted to try rust)
+A project of a language i am making for fun (+ i wanted to try rust)
 
-# How to install
+## How to install
 
 nohow (WIP + i'm lazy)
 
@@ -11,16 +11,17 @@ by the way, for launching tests:
  - add llvm_config to path
  - compile (idk)
 
-# Status
+## Status
 
 Something is working but it is just a small part…
 
-# Todo/Done:
+## Plans:
 - Basic Steps
   - [X] Lexer
+    - [ ] Make it less chaotic 
   - [X] Parser
     - [ ] A bit update it for new ideas (step by step...)
-      - [ ] Change some keywords priorities??
+    - [ ] Change some keywords priorities??
   - [X] Semantic
   - [X] LLVM Compile
   - [ ] Compiling from source files (not interesting part:( )
@@ -33,7 +34,8 @@ Something is working but it is just a small part…
 - Features
   - [X] Functions
     - [ ] Closures??? (far?)
-    - [ ] CPS💀/Coroutines (very far...)
+    - [ ] ~~CPS💀/Coroutines~~ effects (very far...)
+    - [ ] coeffects?? (will i even do it…)
   - [ ] Expressions 
     - [ ] Calling functions using `.` 
     - [X] Arithmetic
@@ -42,14 +44,11 @@ Something is working but it is just a small part…
     - [ ] Flow
       - [X] Assignment
         - [ ] Organize semantically (don't forget) 
-        - [ ] Type Hints using `as`
-        - [ ] Patterns
+        - [X] ~~Type Hints~~ Pattern aliasing using `as`
+        - [X] Patterns
         - [ ] Late Init??
       - [X] `match`
-      - [ ] One-branch `match`??
-      - [ ] `and`/`or`/`then`/`else` (req bool…)
-      - [ ] `while` (by pattern or condition??)
-      - [ ] Function patterns?? (haskell-like)
+      - [ ] Function patterns?? (haskell-like?)
   - [ ] Types 
     - [ ] Basic
       - [X] Basic Int Type
@@ -68,8 +67,8 @@ Something is working but it is just a small part…
       - [ ] Traits??? (very far)
   - [ ] Pattern Matching
     - [X] Int Constants
-    - [ ] Simple Int Constant Expressions
-    - [ ] Tuple patterns
+    - [ ] Simple Int Constant Expressions?
+    - [X] Tuple patterns
     - [ ] Ranges/comparison?
     - [ ] Guards
     - [ ] ...

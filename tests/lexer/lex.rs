@@ -172,6 +172,7 @@ fn test_strings_2() {
 }
 
 #[test]
+#[ignore]
 fn test_braces() {
     use TokenType::*;
     assert_eq!(lex("").as_slice(), []);

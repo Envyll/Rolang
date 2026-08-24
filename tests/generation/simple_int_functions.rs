@@ -1,18 +1,7 @@
-use super::Result;
+use super::{Result, generate};
 use inkwell::OptimizationLevel;
 use inkwell::context::Context;
-use inkwell::module::Module;
 use inkwell::targets::{InitializationConfig, Target};
-use rolang::AResult;
-use rolang::lexer::TokenIterator;
-use rolang::semantics::AnalyzedAST;
-
-pub(super) fn generate(str: &str, module: &Module) -> AResult {
-    let ast = TokenIterator::new(str).normalize().parse();
-    //dbg!(ast);
-    //eprintln!("{}", visualize_ast(&ast));
-    AnalyzedAST::new(ast).build_module(module)
-}
 
 #[test]
 fn test_generation() -> Result<()> {
@@ -42,6 +31,9 @@ fn test_generation() -> Result<()> {
     "#,
         &module,
     )?;
+
+    module.print_to_stderr();
+
     let engine = module.create_jit_execution_engine(OptimizationLevel::Less)?;
 
     let f = unsafe { engine.get_function::<unsafe extern "C" fn(u64, u64) -> u64>("f") }?;

@@ -1,5 +1,7 @@
 use crate::parser::{AST, ASTExpr, ExprInd};
 
+// this part is (partially) ai-created
+
 pub fn visualize_ast_full(ast: &AST) -> String {
     let mut output = String::new();
 
@@ -32,7 +34,7 @@ fn visualize_expr(ast: &AST, expr: ExprInd, depth: usize, out: &mut String) {
         *out += &format!("{indent}┝━{expr}\n");
         indent + "│ "
     };
-    if let Some(errs) = ast.errors.get(&expr) {
+    if let Some(errs) = ast.errors.get(expr) {
         for err in errs {
             *out += &format!("{indent}⚠️  Error: {}\n", err);
         }

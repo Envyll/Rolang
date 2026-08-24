@@ -1,10 +1,10 @@
 use rolang::lexer::TokenIterator;
 #[allow(unused)]
 use rolang::parser::visualize::visualize_ast;
-use rolang::semantics::{AnalyzeErr, AnalyzedAST};
+use rolang::semantics::AnalyzedAST;
 
 fn parse(str: &str) -> AnalyzedAST {
-    AnalyzedAST::new(TokenIterator::new(str).normalize().parse())
+    AnalyzedAST::analyze(TokenIterator::new(str).normalize().parse())
 }
 
 #[test]
@@ -14,7 +14,7 @@ fn check_semantics() {
     f1 a b := a + b
     f2 a b := 
         diff := a - b
-        diff * f1 a b 
+        diff * f1 a b
     "#,
     );
 
@@ -22,9 +22,9 @@ fn check_semantics() {
 
     //eprintln!("{}", visualize_ast(&ast));
 
-    for errs in &ast.errors {
-        assert!(matches!(errs, AnalyzeErr::None));
-    }
+    dbg!(&ast.errors);
+
+    assert!(ast.errors.is_empty());
 }
 #[test]
 fn check_semantics_repeating() {
@@ -38,7 +38,5 @@ fn check_semantics_repeating() {
 
     //eprintln!("{}", visualize_ast(&ast));
 
-    for errs in &ast.errors {
-        assert!(matches!(errs, AnalyzeErr::None));
-    }
+    assert!(ast.errors.is_empty());
 }

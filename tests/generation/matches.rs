@@ -1,5 +1,4 @@
-use super::Result;
-use crate::generation::simple_int_functions::generate;
+use super::{Result, generate};
 use inkwell::OptimizationLevel;
 use inkwell::context::Context;
 use inkwell::passes::PassBuilderOptions;
@@ -130,7 +129,6 @@ fn test_match_tuple() -> Result<()> {
 }
 
 #[test]
-#[ignore] //planned
 fn test_match_bindings() -> Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -164,7 +162,6 @@ fn test_match_bindings() -> Result<()> {
 }
 
 #[test]
-#[ignore] //planned
 fn test_let_match() -> Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -176,7 +173,7 @@ fn test_let_match() -> Result<()> {
     generate(
         "
     f x y :=
-        0, n | n, _ := x, y
+        (0, n) | (n, _) := x, y
         n
     ",
         &module,
@@ -191,7 +188,7 @@ fn test_let_match() -> Result<()> {
     assert_eq!(unsafe { f.call(0, 0) }, 0);
     assert_eq!(unsafe { f.call(1, 0) }, 1);
     assert_eq!(unsafe { f.call(0, 2) }, 2);
-    assert_eq!(unsafe { f.call(2, 3) }, 3);
+    assert_eq!(unsafe { f.call(2, 3) }, 2);
 
     Ok(())
 }

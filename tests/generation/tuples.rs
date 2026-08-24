@@ -1,10 +1,9 @@
-use crate::generation::simple_int_functions::generate;
+use crate::generation::generate;
 use inkwell::OptimizationLevel;
 use inkwell::context::Context;
 use inkwell::targets::{InitializationConfig, Target};
 
 #[test]
-#[ignore] //todo: next step
 fn test_tuples() -> super::Result<()> {
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -13,17 +12,19 @@ fn test_tuples() -> super::Result<()> {
 
     generate(
         r#"
-    f (x, (y, z)) w := w, z, y, x
+        ## f_to x y z w := f (x, (y, z)) w
 
-    g (z as _, _) := { w := (z.1, z.0); w }
+        f ((x, (y, z)) as (int, (int, int))) (w as int) := w, z, y, x
 
-    h () := ()
+        g (z as (int, int)) := { w := (1 z, 0 z); w }
 
-    i (x,) := x
+        h () := ()
 
-    min diff (z as _, _) := z match:
-        0, _ | _, 0 : diff
-        x, y : h (diff + 1) (x - 1, y - 1)
+        i ((x,) as (int,)) := x
+
+        min diff z := z match:
+            0, _ | _, 0 : diff
+            x, y : min (diff + 1) (x - 1, y - 1)
 
     "#,
         &module,
@@ -35,9 +36,7 @@ fn test_tuples() -> super::Result<()> {
 
     let f = unsafe {
         engine
-            .get_function::<unsafe extern "C" fn((u64, (u64, u64)), u64) -> (u64, u64, u64, u64)>(
-                "f",
-            )?
+            .get_function::<unsafe extern "C" fn(u64, u64, u64, u64) -> (u64, u64, u64, u64)>("f")?
     };
 
     let g = unsafe { engine.get_function::<unsafe extern "C" fn((u64, u64)) -> (u64, u64)>("g")? };
@@ -50,8 +49,8 @@ fn test_tuples() -> super::Result<()> {
         unsafe { engine.get_function::<unsafe extern "C" fn(i64, (i64, i64)) -> i64>("min")? };
 
     unsafe {
-        assert_eq!(f.call((0, (0, 0)), 0), (0, 0, 0, 0));
-        assert_eq!(f.call((1, (2, 3)), 4), (4, 3, 2, 1));
+        assert_eq!(f.call(0, 0, 0, 0), (0, 0, 0, 0));
+        assert_eq!(f.call(1, 2, 3, 4), (4, 3, 2, 1));
 
         assert_eq!(g.call((1, 2)), (2, 1));
 
@@ -77,9 +76,9 @@ fn test_tuples_creation() -> super::Result<()> {
 
     generate(
         r#"
-    f x := ()
-    g x y := x, y
-    h x := (x,)
+    f (x as int) := ()
+    g (x as int) (y as int) := x, y
+    h (x as int) := (x,)
 
     i x := g x x, h x
 

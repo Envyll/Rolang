@@ -16,7 +16,7 @@ pub enum Priority {
     Or,  // or else … left
     And, // …<- …<-| : := ::= not and then match while for … right
 
-    Pipe, // >… =… <… |… &… :… left
+    Pipe, // >… =… <… |… &… :… left; as right
 
     Tuple, // , right
 
@@ -32,10 +32,11 @@ pub enum Priority {
     UnAdd,
     Mul,   // * /
     Pow,   // ** right
-    Apply, // apply left, anything nullary; => as … right
+    Apply, // apply left, anything nullary; => … right
     Path,  // ::
 }
 
+// if equal, right
 pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     let it = if it.starts_with('?') { &it[1..] } else { it };
 
@@ -48,6 +49,8 @@ pub fn priority_of_operator(it: &str) -> (Priority, Priority) {
     if it.starts_with("=>") {
         return (Priority::Apply, Priority::Apply);
     }
+
+    // change it
     if it.starts_with("->") {
         return (Priority::Apply, Priority::Apply);
     }
@@ -104,8 +107,8 @@ pub fn priority_of_keyword(it: &str) -> (Priority, Priority) {
         "and" | "then" | "for" | "when" | "while" | "type" | "match" => (And, And),
         "or" | "else" => (Or, And),
         "return" | "yield" | "not" => (Apply, And),
-        "in" | "is" => (Pipe, Range),
-        "as" => (Apply, Apply),
+        "in" | "is" => (Pipe, Tuple),
+        "as" => (Pipe, Pipe),
         "pub" | "priv" | "mut" | "const" => (Path, Path),
         _ => (Apply, Path),
     }
@@ -132,7 +135,7 @@ impl Token {
             TokenType::Indent(_) => unreachable!(),
             TokenType::Error => (Apply, Path),
             TokenType::Lifetime => (Path, Path),
-            TokenType::OrStick => (Priority::Pipe, Priority::Pipe),
+            TokenType::OrStick => (Pipe, Pipe),
         }
     }
 

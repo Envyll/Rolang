@@ -10,11 +10,16 @@ path = "src/lib.rs"
 [dependencies]
 unicode-properties = "0.1.4"
 imstr = "0.2.0"
-bitflags = "2.10.0"
-thiserror = "2.0.18"
-inkwell = { version = "0.8.0", features = [ "llvm21-1" ] }
+bitflags = "2.13.1"
+thiserror = "2.0.19"
+inkwell = { version = "0.10.0", features = [ "llvm21-1" ] }
 derivative = "2.2.0"
-smallbitvec = "2.6.0"
+smallbitvec = "2.6.1"
 derive_more = { version = "2.1.1", features = ["full"] }
-anyhow = "1.0.101"
-itertools = "0.14.0"
+anyhow = "1.0.104"
+itertools = "0.15.0"
+smallvec = { version = "2.0.0-alpha", features = ["bytes", "std", ] }
+rpds = "1.2.1"
+archery = "1.2.2"
+#sorted_vector_map = "0.2.1"
+intmap = "3.1.3"

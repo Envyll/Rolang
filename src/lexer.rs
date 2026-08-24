@@ -129,7 +129,7 @@ pub fn is_keyword(str: &str) -> bool {
         str,
         "_" | "and"
             | "as"
-            | "const"
+            | "do"
             | "else"
             | "match"
             | "mut"
@@ -139,8 +139,8 @@ pub fn is_keyword(str: &str) -> bool {
             | "then"
             | "type"
             | "use"
-            | "when"
-            | "while"
+            | "int"
+            | "where"
     )
 }
 

@@ -227,3 +227,15 @@ fn test_tuples() {
         ],
     )
 }
+/*
+#[test]
+fn test_as() {
+    test_parse("
+        f (x, (y, z) as (int, (int, int))) w := w, z, y, x
+    ",
+        test_nodes![
+            [{ [] ([[] ([[][]]) ] ([[] ([[][]]) ]) ) [] }  {[[][][][]]}]
+        ],
+    )
+}
+*/

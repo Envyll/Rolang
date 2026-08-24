@@ -2,7 +2,10 @@ use crate::ImStr;
 use crate::lexer::Token;
 use crate::normalizer::NormalizedTokenIterator;
 use crate::parser::parser_state::ParserState;
-use std::collections::{HashMap, VecDeque};
+use derive_more::From;
+use intmap::{IntKey, IntMap};
+use smallvec::SmallVec;
+use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::rc::Rc;
@@ -17,36 +20,13 @@ pub mod parser_state;
 pub mod priority;
 pub mod visualize;
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, From)]
 #[repr(transparent)]
 pub struct TokenInd(pub usize);
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, From)]
 #[repr(transparent)]
 pub struct ExprInd(pub usize);
-
-impl ExprInd {
-    pub fn prev(self) -> Option<Self> {
-        Some(Self(self.0.checked_sub(1)?))
-    }
-}
-
-impl From<usize> for TokenInd {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
-}
-impl From<usize> for ExprInd {
-    fn from(value: usize) -> Self {
-        Self(value)
-    }
-}
-
-impl Display for ExprInd {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        f.write_fmt(format_args!("[Expr #{}]", self.0))
-    }
-}
 
 /// # plans
 /// Add attributes??
@@ -101,11 +81,11 @@ pub enum ASTExpr {
     Either(Rc<VecDeque<ExprInd>>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AST {
     pub tokens: Vec<Token>,
     pub expressions: Vec<(TokenInd, ASTExpr)>,
-    pub errors: HashMap<ExprInd, Vec<ASTErr>>,
+    pub errors: Errors,
     pub lines: Vec<ImStr>,
 }
 
@@ -121,6 +101,38 @@ pub enum ASTErr {
     UnexpectedFlowOp,
     #[error("Unexpected `,`")]
     UnexpectedComma,
+}
+
+pub type ExprVec = Rc<[ExprInd]>;
+pub type Errors = IntMap<ExprInd, SmallVec<ASTErr, 1>>;
+
+impl ExprInd {
+    pub fn prev(self) -> Option<Self> {
+        Some(Self(self.0.checked_sub(1)?))
+    }
+}
+
+impl Display for ExprInd {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        f.write_fmt(format_args!("[Expr #{}]", self.0))
+    }
+}
+
+impl IntKey for ExprInd {
+    type Int = usize;
+    const PRIME: Self::Int = Self::Int::PRIME;
+
+    fn into_int(self) -> Self::Int {
+        self.0
+    }
+}
+
+impl IntKey for TokenInd {
+    type Int = usize;
+    const PRIME: Self::Int = Self::Int::PRIME;
+    fn into_int(self) -> Self::Int {
+        self.0
+    }
 }
 
 impl NormalizedTokenIterator {
@@ -148,5 +160,3 @@ impl AST {
         ExprInd(self.expressions.len() - 1)
     }
 }
-
-type ExprVec = Rc<[ExprInd]>;
