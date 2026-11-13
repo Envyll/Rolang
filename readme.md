@@ -1,3 +1,5 @@
+# !!!!!! WIP
+
 ## About
 
 A project of a language i am making for fun (+ i wanted to try rust)
